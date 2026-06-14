@@ -1,0 +1,59 @@
+# Render Blueprint Specification for Royal Bites
+# Link: https://render.com/docs/blueprints
+
+services:
+  # 1. Express Backend Web Service
+  - type: web
+    name: royal-bites-backend
+    env: node
+    plan: free
+    buildCommand: npm install --prefix server
+    startCommand: npm start --prefix server
+    envVars:
+      - key: PORT
+        value: 5000
+      
+      - key: MONGO_URI
+        sync: false
+        description: "MongoDB Atlas connection string (e.g. mongodb+srv://...)"
+      
+      - key: JWT_SECRET
+        generateValue: true
+        description: "Randomly generated key for signing auth tokens"
+      
+      - key: ADMIN_PASSWORD
+        sync: false
+        description: "Password for admin dashboard authentication"
+      
+      - key: RAZORPAY_KEY_ID
+        value: rzp_test_dummyId2026
+        description: "Razorpay public key (optional, falls back to simulation if not set)"
+      
+      - key: RAZORPAY_KEY_SECRET
+        value: dummySecret2026
+        description: "Razorpay secret key (optional)"
+      
+      - key: WHATSAPP_NUMBER
+        value: "1234567890"
+        description: "Support contact WhatsApp phone number"
+      
+      - key: FRONTEND_URL
+        sync: false
+        description: "The full URL of the deployed frontend static site (e.g. https://royal-bites.onrender.com)"
+
+  # 2. React Vite Frontend Static Site
+  - type: static
+    name: royal-bites-frontend
+    env: static
+    plan: free
+    buildCommand: npm install --prefix client && npm run build --prefix client
+    publishPath: client/dist
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          name: royal-bites-backend
+          type: web
+    routes:
+      # Rewrite all frontend routes to index.html for Single Page App (SPA) routing
+      - src: /*
+        dest: /index.html

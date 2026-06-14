@@ -1,0 +1,160 @@
+@import "tailwindcss";
+
+@theme {
+  --color-navy: #0a1628;
+  --color-navy-light: #1a2744;
+  --color-navy-dark: #060e1a;
+  --color-sunset: #ff6b35;
+  --color-sunset-dark: #e85d04;
+  --color-gold: #ffd166;
+  --color-gold-dark: #f4a261;
+  --color-pink: #ffb4a2;
+  --color-pink-soft: #ffcad4;
+  --color-cream: #fff8f0;
+  --color-cream-dark: #fef3e2;
+  --font-display: "Playfair Display", Georgia, serif;
+  --font-body: "Inter", system-ui, sans-serif;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-navy text-cream antialiased overflow-x-hidden;
+    font-family: var(--font-body);
+  }
+
+  ::selection {
+    @apply bg-sunset/40 text-cream;
+  }
+}
+
+@utility glass {
+  @apply bg-white/10 backdrop-blur-xl border border-white/20 shadow-xl;
+}
+
+@utility glass-strong {
+  @apply bg-white/15 backdrop-blur-2xl border border-white/25 shadow-2xl;
+}
+
+@utility glass-card {
+  @apply bg-gradient-to-br from-white/15 to-white/5 backdrop-blur-xl border border-white/20 rounded-2xl shadow-xl;
+}
+
+@utility text-gradient {
+  @apply bg-gradient-to-r from-gold via-sunset to-pink bg-clip-text text-transparent;
+}
+
+@utility btn-primary {
+  @apply inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full font-semibold
+    bg-gradient-to-r from-sunset to-gold-dark text-navy
+    hover:from-gold hover:to-sunset transition-all duration-300
+    shadow-lg shadow-sunset/30 hover:shadow-sunset/50 hover:-translate-y-0.5;
+}
+
+@utility btn-secondary {
+  @apply inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full font-semibold
+    bg-white/10 backdrop-blur-xl border border-white/20 shadow-xl text-cream
+    hover:bg-white/20 transition-all duration-300 hover:-translate-y-0.5;
+}
+
+@utility input-field {
+  @apply w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-cream
+    placeholder:text-cream/50 focus:outline-none focus:ring-2 focus:ring-sunset/50
+    focus:border-sunset/50 transition-all;
+}
+
+@utility section-title {
+  font-family: var(--font-display);
+  @apply text-4xl md:text-5xl font-bold text-gradient;
+}
+
+.hero-gradient {
+  background: linear-gradient(
+    160deg,
+    #060e1a 0%,
+    #0a1628 30%,
+    #1a2744 50%,
+    rgba(255, 107, 53, 0.4) 75%,
+    rgba(255, 209, 102, 0.3) 90%,
+    rgba(255, 180, 162, 0.2) 100%
+  );
+}
+
+.sunset-gradient {
+  background: linear-gradient(
+    135deg,
+    #0a1628 0%,
+    #1a2744 25%,
+    #ff6b35 55%,
+    #ffd166 75%,
+    #ffb4a2 100%
+  );
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Toast Animations & Progress Bar */
+@keyframes toastProgress {
+  from { width: 100%; }
+  to { width: 0%; }
+}
+@keyframes slideInRight {
+  from { transform: translateX(120%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+@keyframes slideOutRight {
+  from { transform: translateX(0); opacity: 1; }
+  to { transform: translateX(120%); opacity: 0; }
+}
+@keyframes slideInTop {
+  from { transform: translateY(-120%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+@keyframes slideOutTop {
+  from { transform: translateY(0); opacity: 1; }
+  to { transform: translateY(-120%); opacity: 0; }
+}
+
+.animate-toast-progress {
+  animation: toastProgress linear forwards;
+}
+
+.animate-enter {
+  animation: slideInRight 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-leave {
+  animation: slideOutRight 0.3s cubic-bezier(0.7, 0, 0.84, 0) forwards;
+}
+
+@media (max-width: 767px) {
+  .animate-enter {
+    animation: slideInTop 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+  .animate-leave {
+    animation: slideOutTop 0.3s cubic-bezier(0.7, 0, 0.84, 0) forwards;
+  }
+}
+
