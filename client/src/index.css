@@ -158,3 +158,50 @@
   }
 }
 
+/* Hero Showcase Transitions */
+@keyframes kenBurns {
+  0% {
+    transform: scale(1);
+  }
+  100% {
+    transform: scale(1.06);
+  }
+}
+
+.animate-ken-burns {
+  animation: kenBurns 3000ms ease-out forwards;
+}
+
+@keyframes fadeOut400 {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes fadeIn400 {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.animate-fade-out-400 {
+  animation: fadeOut400 400ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.animate-fade-in-400 {
+  animation: fadeIn400 400ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.tilt-container {
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+
+
