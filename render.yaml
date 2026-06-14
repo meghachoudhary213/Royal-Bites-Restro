@@ -44,8 +44,6 @@ services:
   # 2. React Vite Frontend Static Site
   - type: static
     name: royal-bites-frontend
-    env: static
-    plan: free
     buildCommand: npm install --prefix client && npm run build --prefix client
     publishPath: client/dist
     envVars:
