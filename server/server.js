@@ -18,6 +18,7 @@ const reviewRoutes = require('./routes/reviewRoutes');
 const couponRoutes = require('./routes/couponRoutes');
 const menuRoutes = require('./routes/menuRoutes');
 const inquiryRoutes = require('./routes/inquiries');
+const whatsappRoutes = require('./routes/whatsappRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -52,6 +53,7 @@ app.use(cors({
 }));
 
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // API health endpoint
 app.get('/api/health', (_req, res) => {
@@ -70,6 +72,7 @@ app.use('/api/reviews', reviewRoutes);
 app.use('/api/coupons', couponRoutes);
 app.use('/api/menu', menuRoutes);
 app.use('/api/inquiries', inquiryRoutes);
+app.use('/api/whatsapp', whatsappRoutes);
 
 app.listen(PORT, () => {
   console.log(`Royal Bites server running on port ${PORT}`);

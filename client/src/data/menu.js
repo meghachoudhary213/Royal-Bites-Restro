@@ -432,7 +432,7 @@ export const restaurantInfo = {
     kitchen: 'Kitchen closes 30 minutes before closing',
   },
   address: 'VIP Road, Bhopal, Madhya Pradesh',
-  phone: '+91 98765 43210',
+  phone: '+91 96918 32020',
   email: 'reservations@royalbites.in',
   whatsappMessage: 'Hi Royal Bites, I want to book a table.',
 };
