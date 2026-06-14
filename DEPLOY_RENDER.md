@@ -48,7 +48,7 @@ Ensure you have these variables ready for configuration in the Render dashboard:
 | `RAZORPAY_KEY_ID` | Razorpay sandbox/live key ID (optional, defaults to simulation) | `rzp_test_xxxxxx` |
 | `RAZORPAY_KEY_SECRET`| Razorpay secret key (optional, defaults to simulation) | `dummySecret2026` |
 | `FRONTEND_URL` | The URL of your deployed frontend static site | `https://royal-bites.onrender.com` |
-| `WHATSAPP_NUMBER` | Contact phone number for inquiries and orders | `1234567890` |
+| `WHATSAPP_NUMBER` | Contact phone number for inquiries and orders | `9691832020` |
 
 ### Frontend (Static Site)
 

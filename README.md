@@ -88,7 +88,7 @@ Copy `server/.env.example` to `server/.env` and update:
 PORT=5000
 MONGODB_URI=mongodb://127.0.0.1:27017/royal-bites
 ADMIN_PASSWORD=royalbites2026
-WHATSAPP_NUMBER=1234567890
+WHATSAPP_NUMBER=9691832020
 ```
 
 3. **Start MongoDB** (if running locally)

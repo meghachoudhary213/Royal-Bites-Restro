@@ -60,7 +60,7 @@ app.get('/api/health', (_req, res) => {
   res.json({
     success: true,
     message: 'Royal Bites API is running',
-    whatsapp: process.env.WHATSAPP_NUMBER || '1234567890',
+    whatsapp: process.env.WHATSAPP_NUMBER || '9691832020',
   });
 });
 

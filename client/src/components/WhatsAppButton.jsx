@@ -1,7 +1,7 @@
 import { restaurantInfo } from '../data/menu';
 
 export default function WhatsAppButton({ number }) {
-  const phone = (number || '1234567890').replace(/\D/g, '');
+  const phone = (number || '9691832020').replace(/\D/g, '');
   const message = encodeURIComponent(restaurantInfo.whatsappMessage);
   const url = `https://wa.me/${phone}?text=${message}`;
 
@@ -27,7 +27,7 @@ export default function WhatsAppButton({ number }) {
 }
 
 export function openWhatsApp(number) {
-  const phone = (number || '1234567890').replace(/\D/g, '');
+  const phone = (number || '9691832020').replace(/\D/g, '');
   const message = encodeURIComponent(restaurantInfo.whatsappMessage);
   window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
 }

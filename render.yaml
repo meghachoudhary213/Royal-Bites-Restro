@@ -34,7 +34,7 @@ services:
         description: "Razorpay secret key (optional)"
       
       - key: WHATSAPP_NUMBER
-        value: "1234567890"
+        value: "9691832020"
         description: "Support contact WhatsApp phone number"
       
       - key: FRONTEND_URL
