@@ -124,42 +124,70 @@ const handleIncomingMessage = async (req, res) => {
   const { From, To, Body } = req.body;
 
   if (!From || !Body) {
+    console.error('[DEBUG Error] Webhook received missing parameters. Body:', req.body);
     return res.status(400).json({ success: false, error: 'Missing From or Body parameters' });
   }
 
-  console.log(`WhatsApp Incoming Webhook - From: ${From}, Body: ${Body}`);
+  console.log('[DEBUG] --- Incoming WhatsApp Webhook Request ---');
+  console.log(`[DEBUG] Sender Number (From): ${From}`);
+  console.log(`[DEBUG] Recipient Number (To): ${To}`);
+  console.log(`[DEBUG] Message Body: "${Body}"`);
 
   // Send an immediate 200 OK Response to Twilio to prevent timeout
   res.type('text/xml').send('<Response></Response>');
 
+  // 1. Log incoming message in DB (Non-blocking so it doesn't block the reply if DB is disconnected/slow)
   try {
-    // 1. Log incoming message in DB
-    await WhatsAppMessage.create({
+    WhatsAppMessage.create({
       from: From,
       to: To || 'whatsapp:+919691832020',
       body: Body,
       direction: 'inbound'
-    });
+    }).catch(err => console.error('[DEBUG Error] Async DB logging failed for incoming message:', err.message));
+  } catch (dbErr) {
+    console.error('[DEBUG Error] Failed to log incoming message to DB:', dbErr.message);
+  }
 
+  try {
     // 2. Extract last 10 digits of phone number to query MongoDB context
     const phoneDigits = From.replace(/\D/g, '');
     const last10Digits = phoneDigits.slice(-10);
 
-    // 3. Query context details
-    let menuItems = await MenuItem.find({ available: true });
-    if (menuItems.length === 0) {
-      menuItems = fallbackMenu;
+    // 3. Query context details (with safe catch blocks and maxTimeMS to prevent hang)
+    let menuItems = fallbackMenu;
+    try {
+      const dbMenuItems = await MenuItem.find({ available: true }).maxTimeMS(2000);
+      if (dbMenuItems && dbMenuItems.length > 0) {
+        menuItems = dbMenuItems;
+      }
+    } catch (dbErr) {
+      console.warn('[DEBUG Warning] Failed to query MenuItem collection. Using local fallback menu. Error:', dbErr.message);
     }
 
-    const coupons = await Coupon.find({ active: true });
-    
-    const orders = await Order.find({
-      customerPhone: { $regex: last10Digits }
-    }).sort({ createdAt: -1 }).limit(5);
+    let coupons = [];
+    try {
+      coupons = await Coupon.find({ active: true }).maxTimeMS(2000);
+    } catch (dbErr) {
+      console.warn('[DEBUG Warning] Failed to query Coupon collection. Error:', dbErr.message);
+    }
 
-    const bookings = await Booking.find({
-      phone: { $regex: last10Digits }
-    }).sort({ createdAt: -1 }).limit(5);
+    let orders = [];
+    try {
+      orders = await Order.find({
+        customerPhone: { $regex: last10Digits }
+      }).sort({ createdAt: -1 }).limit(5).maxTimeMS(2000);
+    } catch (dbErr) {
+      console.warn('[DEBUG Warning] Failed to query Order collection. Error:', dbErr.message);
+    }
+
+    let bookings = [];
+    try {
+      bookings = await Booking.find({
+        phone: { $regex: last10Digits }
+      }).sort({ createdAt: -1 }).limit(5).maxTimeMS(2000);
+    } catch (dbErr) {
+      console.warn('[DEBUG Warning] Failed to query Booking collection. Error:', dbErr.message);
+    }
 
     const context = {
       menu: menuItems,
@@ -173,26 +201,39 @@ const handleIncomingMessage = async (req, res) => {
 
     // 4. Request response from Grok xAI API
     try {
+      console.log('[DEBUG] Querying Grok xAI API...');
       reply = await getGrokReply(Body, context);
+      console.log(`[DEBUG] Generated AI Response: "${reply}"`);
     } catch (grokError) {
-      console.warn('Grok xAI API failed, invoking rule-based fallback:', grokError.message);
-      // 5. Fallback if Grok fails
-      reply = getRuleBasedFallbackReply(Body, context);
+      console.error('[DEBUG Error] Grok xAI API call failed:', grokError.message || grokError);
+      // Fallback as requested by user
+      reply = "Hello from Royal Bites. How can I help you?";
+      console.log(`[DEBUG] Using Fallback Reply: "${reply}"`);
     }
 
-    // 6. Send the reply via Twilio WhatsApp API
-    await sendWhatsAppMessage(From, reply);
+    // 5. Send the reply via Twilio WhatsApp API
+    try {
+      console.log(`[DEBUG] Twilio Send: Attempting message send to ${From}...`);
+      const twilioResponse = await sendWhatsAppMessage(From, reply);
+      console.log('[DEBUG] Twilio Send Response (Success):', JSON.stringify(twilioResponse));
+    } catch (twilioError) {
+      console.error('[DEBUG Error] Twilio SDK messages.create call failed. Full Twilio Error:', twilioError);
+    }
 
-    // 7. Log outgoing message in DB
-    await WhatsAppMessage.create({
-      from: To || 'whatsapp:+919691832020',
-      to: From,
-      body: reply,
-      direction: 'outbound'
-    });
+    // 6. Log outgoing message in DB (Non-blocking)
+    try {
+      WhatsAppMessage.create({
+        from: To || 'whatsapp:+919691832020',
+        to: From,
+        body: reply,
+        direction: 'outbound'
+      }).catch(err => console.error('[DEBUG Error] Async DB logging failed for outgoing message:', err.message));
+    } catch (dbErr) {
+      console.error('[DEBUG Error] Failed to log outgoing message to DB:', dbErr.message);
+    }
 
   } catch (err) {
-    console.error('Error handling incoming WhatsApp webhook:', err.message);
+    console.error('[DEBUG Error] Exception caught in webhook processing:', err.message || err);
   }
 };
 
