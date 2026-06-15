@@ -12,6 +12,7 @@ import UserProfile from './components/UserProfile';
 import MyOrders from './components/MyOrders';
 import CheckoutModal from './components/CheckoutModal';
 import FoodDetailsModal from './components/FoodDetailsModal';
+import ShareModal from './components/ShareModal';
 import CartSidebar from './components/CartSidebar';
 import DashboardPage from './pages/DashboardPage';
 import OrderTrackingPage from './pages/OrderTrackingPage';
@@ -44,14 +45,48 @@ export default function App() {
       setConfirmState(e.detail);
     };
     window.addEventListener('show-confirm', handleShowConfirm);
+
+    const handleShowShare = (e) => {
+      setShareModalData(e.detail);
+    };
+    window.addEventListener('show-share', handleShowShare);
     
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
     checkMobile();
     window.addEventListener('resize', checkMobile);
+
+    window.triggerShare = async (data) => {
+      const shareTitle = data?.title || 'Royal Bites';
+      const shareText = data?.text || 'Experience premium dining at Royal Bites 🍽️';
+      const shareUrl = data?.url || 'https://royal-bites-restro.onrender.com';
+
+      if (navigator.share) {
+        try {
+          await navigator.share({
+            title: shareTitle,
+            text: shareText,
+            url: shareUrl
+          });
+          return;
+        } catch (err) {
+          if (err.name !== 'AbortError') {
+            console.error('Web Share API error:', err);
+          } else {
+            return;
+          }
+        }
+      }
+
+      window.dispatchEvent(new CustomEvent('show-share', {
+        detail: { title: shareTitle, text: shareText, url: shareUrl }
+      }));
+    };
     
     return () => {
       window.removeEventListener('show-confirm', handleShowConfirm);
+      window.removeEventListener('show-share', handleShowShare);
       window.removeEventListener('resize', checkMobile);
+      delete window.triggerShare;
     };
   }, []);
 
@@ -79,6 +114,7 @@ export default function App() {
   const [isOrdersOpen, setIsOrdersOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [selectedFoodItem, setSelectedFoodItem] = useState(null);
+  const [shareModalData, setShareModalData] = useState(null);
 
   // Unified Menu active states for external filters (Mega Menu, Cuisine Explorer)
   const [activeCategory, setActiveCategory] = useState('north-indian');
@@ -309,6 +345,14 @@ export default function App() {
               item={selectedFoodItem}
               onClose={() => setSelectedFoodItem(null)}
               onAddToCart={handleAddToCart}
+            />
+
+            <ShareModal
+              isOpen={!!shareModalData}
+              onClose={() => setShareModalData(null)}
+              title={shareModalData?.title}
+              text={shareModalData?.text}
+              url={shareModalData?.url}
             />
           </>
         }

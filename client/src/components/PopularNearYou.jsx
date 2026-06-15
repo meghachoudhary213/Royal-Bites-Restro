@@ -1,4 +1,4 @@
-import { Star, Plus, ArrowRight, Heart } from 'lucide-react';
+import { Star, Plus, ArrowRight, Heart, Share2 } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
@@ -84,22 +84,39 @@ export default function PopularNearYou({ onItemClick, onAddToCart, currentUser, 
                     {item.rating}
                   </span>
                   
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onToggleFavourite && onToggleFavourite(item.name);
-                    }}
-                    className="p-2 rounded-full bg-navy/80 border border-white/10 text-cream/80 hover:text-pink hover:bg-navy transition-all duration-300 cursor-pointer"
-                    aria-label="Like item"
-                  >
-                    <Heart
-                      className={`w-4 h-4 transition-colors ${
-                        currentUser && currentUser.favouriteDishes && currentUser.favouriteDishes.includes(item.name)
-                          ? 'fill-pink text-pink'
-                          : ''
-                      }`}
-                    />
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        window.triggerShare && window.triggerShare({
+                          title: 'Royal Bites',
+                          text: `Check out ${item.name} at Royal Bites 🍽️`,
+                          url: 'https://royal-bites-restro.onrender.com/menu'
+                        });
+                      }}
+                      className="p-2 rounded-full bg-navy/80 border border-white/10 text-cream/80 hover:text-gold hover:bg-navy transition-all duration-300 cursor-pointer"
+                      aria-label="Share item"
+                      title={`Share ${item.name}`}
+                    >
+                      <Share2 className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onToggleFavourite && onToggleFavourite(item.name);
+                      }}
+                      className="p-2 rounded-full bg-navy/80 border border-white/10 text-cream/80 hover:text-pink hover:bg-navy transition-all duration-300 cursor-pointer"
+                      aria-label="Like item"
+                    >
+                      <Heart
+                        className={`w-4 h-4 transition-colors ${
+                          currentUser && currentUser.favouriteDishes && currentUser.favouriteDishes.includes(item.name)
+                            ? 'fill-pink text-pink'
+                            : ''
+                        }`}
+                      />
+                    </button>
+                  </div>
                 </div>
 
                 {item.tag && (

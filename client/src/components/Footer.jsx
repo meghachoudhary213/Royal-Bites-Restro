@@ -57,16 +57,31 @@ export default function Footer() {
           <div>
             <h4 className="text-gold font-semibold mb-4">Follow Us</h4>
             <div className="flex gap-3">
-              {[Share2, Heart, Star].map((Icon, i) => (
-                <a
-                  key={i}
-                  href="#"
-                  className="p-3 rounded-xl glass hover:bg-white/15 transition-colors"
-                  aria-label="Social link"
-                >
-                  <Icon className="w-5 h-5 text-cream/70 hover:text-gold" />
-                </a>
-              ))}
+              <button
+                onClick={() => window.triggerShare && window.triggerShare({
+                  title: 'Royal Bites',
+                  text: 'Experience premium dining at Royal Bites 🍽️',
+                  url: 'https://royal-bites-restro.onrender.com'
+                })}
+                className="p-3 rounded-xl glass hover:bg-white/15 text-cream/70 hover:text-gold transition-colors cursor-pointer"
+                aria-label="Share Website"
+              >
+                <Share2 className="w-5 h-5" />
+              </button>
+              <a
+                href="#popular"
+                className="p-3 rounded-xl glass hover:bg-white/15 text-cream/70 hover:text-gold transition-colors flex items-center justify-center"
+                aria-label="Favorites"
+              >
+                <Heart className="w-5 h-5" />
+              </a>
+              <a
+                href="#reviews"
+                className="p-3 rounded-xl glass hover:bg-white/15 text-cream/70 hover:text-gold transition-colors flex items-center justify-center"
+                aria-label="Reviews"
+              >
+                <Star className="w-5 h-5" />
+              </a>
             </div>
           </div>
         </div>

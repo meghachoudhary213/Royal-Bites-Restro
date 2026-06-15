@@ -1,3 +1,5 @@
+import { Share2 } from 'lucide-react';
+
 const cuisines = [
   {
     id: 'north-indian',
@@ -65,8 +67,21 @@ export default function CuisineExplorer({ onSelectCategory }) {
           <p className="text-sunset uppercase tracking-[0.3em] text-sm font-medium mb-3">
             Gourmet Cuisines
           </p>
-          <h2 className="section-title">Cuisine Explorer</h2>
-          <p className="text-cream/60 mt-2 max-w-xl mx-auto">
+          <div className="flex items-center justify-center gap-3">
+            <h2 className="section-title">Cuisine Explorer</h2>
+            <button
+              onClick={() => window.triggerShare && window.triggerShare({
+                title: 'Royal Bites Cuisines',
+                text: 'Explore the gourmet cuisines at Royal Bites 🍽️',
+                url: 'https://royal-bites-restro.onrender.com'
+              })}
+              className="p-2.5 rounded-full glass border border-white/10 hover:border-sunset/45 text-cream hover:text-gold transition-all duration-300 shadow-md flex items-center justify-center cursor-pointer"
+              title="Share Cuisines"
+            >
+              <Share2 className="w-4 h-4" />
+            </button>
+          </div>
+          <p className="text-cream/60 mt-3 max-w-xl mx-auto">
             Browse dishes by your favorite culinary styles. Click a card to filter our menu instantly.
           </p>
         </div>

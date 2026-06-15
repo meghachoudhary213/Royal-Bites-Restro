@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { menuCategories } from '../data/menu';
-import { Star, Search, Plus, ShoppingBag } from 'lucide-react';
+import { Star, Search, Plus, ShoppingBag, Share2 } from 'lucide-react';
 
 const VegIndicator = ({ isVeg }) => (
   <span 
@@ -170,17 +170,35 @@ export default function Menu({
                     <span className="text-xs text-sunset-dark font-medium group-hover:text-sunset transition-colors">
                       Tap to view details
                     </span>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation(); // prevent opening modal
-                        onAddToCart && onAddToCart(item);
-                      }}
-                      className="p-2 rounded-xl bg-white/10 hover:bg-sunset text-cream hover:text-navy transition-all duration-300"
-                      aria-label={`Add ${item.name} to cart`}
-                    >
-                      <Plus className="w-4 h-4" />
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          window.triggerShare && window.triggerShare({
+                            title: 'Royal Bites',
+                            text: `Check out ${item.name} at Royal Bites 🍽️`,
+                            url: 'https://royal-bites-restro.onrender.com/menu'
+                          });
+                        }}
+                        className="p-2 rounded-xl bg-white/10 hover:bg-gold text-cream hover:text-navy transition-all duration-300 cursor-pointer"
+                        aria-label={`Share ${item.name}`}
+                        title={`Share ${item.name}`}
+                      >
+                        <Share2 className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation(); // prevent opening modal
+                          onAddToCart && onAddToCart(item);
+                        }}
+                        className="p-2 rounded-xl bg-white/10 hover:bg-sunset text-cream hover:text-navy transition-all duration-300"
+                        aria-label={`Add ${item.name} to cart`}
+                      >
+                        <Plus className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               </article>

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { ArrowRight, Sparkles, Star } from 'lucide-react';
+import { ArrowRight, Sparkles, Star, Share2 } from 'lucide-react';
 import { restaurantInfo, menuCategories } from '../data/menu';
 import { Link } from 'react-router-dom';
 
@@ -153,6 +153,17 @@ export default function Hero() {
               <Link to="/menu" className="btn-secondary">
                 Explore Menu
               </Link>
+              <button 
+                onClick={() => window.triggerShare && window.triggerShare({
+                  title: 'Royal Bites',
+                  text: 'Experience premium dining at Royal Bites 🍽️',
+                  url: 'https://royal-bites-restro.onrender.com'
+                })}
+                className="btn-secondary flex items-center gap-2 cursor-pointer"
+              >
+                <Share2 className="w-4 h-4" />
+                Share
+              </button>
             </div>
 
             <div className="flex gap-8 pt-4">
@@ -179,6 +190,22 @@ export default function Hero() {
               >
                 {/* Images Showcase Area */}
                 <div className="relative w-full h-[400px] sm:h-[500px] lg:h-[580px] rounded-2xl overflow-hidden">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      window.triggerShare && window.triggerShare({
+                        title: 'Royal Bites',
+                        text: `Check out ${currentDish.name} at Royal Bites 🍽️`,
+                        url: 'https://royal-bites-restro.onrender.com/menu'
+                      });
+                    }}
+                    className="absolute top-4 left-4 z-40 p-3 rounded-full bg-navy/80 border border-white/10 text-cream/80 hover:text-gold hover:bg-navy transition-all duration-300 shadow-lg cursor-pointer animate-fade-in-400"
+                    aria-label={`Share ${currentDish.name}`}
+                    title={`Share ${currentDish.name}`}
+                  >
+                    <Share2 className="w-4 h-4" />
+                  </button>
+
                   <img
                     key={currentDish.name}
                     src={currentDish.image}
