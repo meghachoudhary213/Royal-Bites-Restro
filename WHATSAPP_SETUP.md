@@ -16,7 +16,7 @@ TWILIO_WHATSAPP_NUMBER=whatsapp:+14155238886
 
 # Grok xAI credentials
 XAI_API_KEY=your_grok_xai_api_key_here
-XAI_MODEL=grok-beta
+XAI_MODEL=grok-2-mini
 ```
 
 ---

@@ -1,5 +1,5 @@
 const apiKey = process.env.XAI_API_KEY;
-const modelName = process.env.XAI_MODEL || 'grok-beta';
+const modelName = process.env.XAI_MODEL || 'grok-2-mini';
 
 /**
  * Gets a response from the Grok xAI API
