@@ -19,7 +19,7 @@ export default function Home({
   onToggleFavourite,
   menuCategories,
 }) {
-  const [whatsappNumber, setWhatsappNumber] = useState('9691832020');
+  const [whatsappNumber, setWhatsappNumber] = useState(import.meta.env.VITE_WHATSAPP_NUMBER || '9691832020');
   const location = useLocation();
 
   useEffect(() => {

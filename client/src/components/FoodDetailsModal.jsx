@@ -37,7 +37,7 @@ export default function FoodDetailsModal({ item, onClose, onAddToCart }) {
   const handleWhatsAppOrder = () => {
     const message = `Hi Royal Bites, I would like to order "${item.name}" (Price: ₹${item.price}). Please confirm my order!`;
     const encoded = encodeURIComponent(message);
-    const whatsappNum = restaurantInfo.phone.replace(/[^0-9]/g, '');
+    const whatsappNum = (import.meta.env.VITE_WHATSAPP_NUMBER || restaurantInfo.phone).replace(/[^0-9]/g, '');
     window.open(`https://wa.me/${whatsappNum}?text=${encoded}`, '_blank');
   };
 

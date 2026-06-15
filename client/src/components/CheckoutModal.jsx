@@ -365,7 +365,7 @@ export default function CheckoutModal({
     message += `Please confirm my order and prepare the feast!`;
 
     const encoded = encodeURIComponent(message);
-    const whatsappNum = restaurantInfo.phone.replace(/[^0-9]/g, '');
+    const whatsappNum = (import.meta.env.VITE_WHATSAPP_NUMBER || restaurantInfo.phone).replace(/[^0-9]/g, '');
     
     // Redirect to WhatsApp
     window.open(`https://wa.me/${whatsappNum}?text=${encoded}`, '_blank');
