@@ -6,6 +6,9 @@ const WhatsAppMessage = require('../models/WhatsAppMessage');
 const { getGrokReply, formatGrokReply } = require('../services/grokRestaurantAssistant');
 const { sendWhatsAppMessage } = require('../services/twilioWhatsAppService');
 
+// In-memory session store for WhatsApp orders
+const whatsappSessions = new Map();
+
 // Static menu fallback if MongoDB MenuItem collection is empty
 const fallbackMenu = [
   { name: 'Paneer Butter Masala', category: 'North Indian', price: 249, description: 'Creamy tomato gravy with soft paneer cubes', isVeg: true, rating: 4.9, popular: true },
@@ -19,56 +22,179 @@ const fallbackMenu = [
   { name: 'Gulab Jamun', category: 'Desserts', price: 99, description: 'Soft milk-solid balls soaked in sugar syrup', isVeg: true, rating: 4.8 }
 ];
 
+// Helper to find menu item using robust matching for Hinglish inputs
+const findMenuItem = (query, menu) => {
+  const queryLower = query.toLowerCase();
+  
+  // 1. Direct matching
+  let matched = menu.find(item => queryLower.includes(item.name.toLowerCase()));
+  if (matched) return matched;
+  
+  // 2. Fuzzy/word matching for Hinglish inputs
+  matched = menu.find(item => {
+    const nameLower = item.name.toLowerCase();
+    
+    // Check key dishes specifically
+    if (nameLower.includes('margherita') && (queryLower.includes('margrita') || queryLower.includes('margerita') || queryLower.includes('margarita'))) {
+      return true;
+    }
+    if (nameLower.includes('paneer tikka') && (queryLower.includes('paneer') || queryLower.includes('panir')) && (queryLower.includes('tikka') || queryLower.includes('tika'))) {
+      return true;
+    }
+    if (nameLower.includes('veg supreme') && queryLower.includes('supreme') && queryLower.includes('pizza')) {
+      return true;
+    }
+    if (nameLower.includes('chole bhature') && (queryLower.includes('chole') || queryLower.includes('bhature'))) {
+      return true;
+    }
+    if (nameLower.includes('dal makhani') && (queryLower.includes('dal') || queryLower.includes('makhani'))) {
+      return true;
+    }
+    
+    const nameParts = nameLower.split(/\s+/).filter(p => p.length > 2);
+    // Check if query contains any unique word of the item
+    const uniqueWordMatch = nameParts.some(part => {
+      const isCommon = ['veg', 'dry', 'special', 'royal', 'butter', 'masala', 'pizza', 'burger', 'roll', 'soda', 'sweet', 'fresh', 'lime'].includes(part);
+      if (isCommon) return false;
+      return queryLower.includes(part);
+    });
+    
+    if (uniqueWordMatch) return true;
+    return false;
+  });
+
+  return matched;
+};
+
 // Fallback rule-based replies
-const getRuleBasedFallbackReply = (body, context) => {
+const getRuleBasedFallbackReply = (body, context, fromNumber) => {
   const query = body.toLowerCase().trim();
   const isHindi = /dikhao|batao|karni|hai|mera|kya|bhedo|dekhna/i.test(query);
 
-  // 1. Specific dish lookup (e.g. "paneer tikka price", "paneer tikka rate")
-  const matchedItem = context.menu.find(item => query.includes(item.name.toLowerCase()));
-  if (matchedItem && (query.includes('price') || query.includes('rate') || query.includes('cost') || query.includes('rupaye') || query.includes('rupees') || query.includes('paise') || query.includes('detail') || query.includes('kya'))) {
-    if (isHindi) {
-      return `*${matchedItem.name}* ₹${matchedItem.price} hai.\nDescription: ${matchedItem.description || 'No description available'}.`;
-    } else {
-      return `*${matchedItem.name}* is ₹${matchedItem.price}.\nDescription: ${matchedItem.description || 'No description available'}.`;
+  // 1. Session flow processing if an order session is in progress
+  const session = whatsappSessions.get(fromNumber);
+  if (session) {
+    if (query.includes('cancel') || query.includes('abort') || query.includes('stop') || query.includes('hatao')) {
+      whatsappSessions.delete(fromNumber);
+      return `Order cancel kar diya hai. Aap fir se new order start kar sakte hain.`;
+    }
+
+    if (session.step === 'waiting_for_quantity') {
+      const qty = parseInt(body.replace(/\D/g, ''), 10);
+      if (isNaN(qty) || qty <= 0) {
+        return `Kripya ek valid quantity (number) bataiye. Jaise: 1, 2, 3.`;
+      }
+      session.quantity = qty;
+      session.step = 'waiting_for_address';
+      return `${session.dishName} ki quantity ${qty} set ho gayi hai. Delivery address kya hai? Kripya apna pura address likh kar bhejein.`;
+    }
+
+    if (session.step === 'waiting_for_address') {
+      session.address = body;
+      const rawOrderId = Math.floor(100000 + Math.random() * 900000).toString();
+      const orderId = `RB-${rawOrderId}`;
+      const subtotal = session.price * session.quantity;
+      const gst = Math.round(subtotal * 0.05 * 100) / 100;
+      const deliveryCharge = subtotal >= 500 ? 0 : 40;
+      const total = subtotal + gst + deliveryCharge;
+      const currentDate = new Date().toISOString().split('T')[0];
+
+      const newOrder = {
+        id: orderId,
+        date: currentDate,
+        customerName: 'WhatsApp Guest',
+        customerPhone: fromNumber,
+        customerEmail: 'whatsapp@royalbites.in',
+        items: [{
+          name: session.dishName,
+          price: session.price,
+          quantity: session.quantity
+        }],
+        subtotal,
+        discount: 0,
+        coupon: 'None',
+        hasGift: false,
+        gst,
+        deliveryCharge,
+        total,
+        orderType: 'Delivery',
+        paymentMethod: 'COD',
+        specialInstructions: 'Ordered via WhatsApp AI Assistant',
+        estimatedTime: '30-40 mins',
+        status: 'Order Received',
+        paymentStatus: 'Pending'
+      };
+
+      // We return the response text directly, saving happens in the main handler
+      session.finalOrder = newOrder;
+      whatsappSessions.delete(fromNumber);
+      return `✅ *Order Confirmed!*\n` +
+             `Order ID: ${rawOrderId}\n` +
+             `Item: ${session.dishName}\n` +
+             `Qty: ${session.quantity}\n` +
+             `Total: ₹${total.toFixed(2)}\n` +
+             `Payment: Cash/UPI on delivery\n` +
+             `Estimated time: 30-40 mins`;
     }
   }
 
-  // 2. Veg dishes
-  if (query.includes('veg') && !query.includes('non')) {
-    const vegItems = context.menu.filter(i => i.isVeg !== false);
-    let reply = `Here are popular veg dishes:\n`;
-    vegItems.slice(0, 6).forEach(i => {
-      reply += `• ${i.name} - ₹${i.price}\n`;
-    });
-    return reply;
-  }
+  // 2. Specific intent checking for new request
+  const isTrackingQuery = /track|status|kaha|kahan|id|check/i.test(query);
+  const hasOrderKeyword = query.includes('order');
+  const wantsTracking = isTrackingQuery || (hasOrderKeyword && (query.includes('status') || query.includes('track') || query.includes('kaha') || query.includes('kahan') || query.includes('check')));
 
-  // 3. Non-veg dishes
-  if (query.includes('non veg') || query.includes('nonveg')) {
-    const nonVegItems = context.menu.filter(i => i.isVeg === false);
-    let reply = `Here are popular non-veg dishes:\n`;
-    if (nonVegItems.length > 0) {
-      nonVegItems.slice(0, 6).forEach(i => {
-        reply += `• ${i.name} - ₹${i.price}\n`;
-      });
+  if (wantsTracking) {
+    if (context.orders && context.orders.length > 0) {
+      const lastOrder = context.orders[0];
+      return `Aapka aakhri order status:\n*Order ID:* ${lastOrder.id}\n*Status:* ${lastOrder.status}\n*Total:* ₹${lastOrder.total}\n\nAap isey yahan track kar sakte hain: https://royal-bites-restro.onrender.com/track-order/${lastOrder.id}`;
     } else {
-      reply += `Currently all our dishes are vegetarian.`;
+      return `Humein aapke number se koi recent order nahi mila. Kripya apna 6-digit Order ID share karein.`;
     }
-    return reply;
   }
 
-  // 4. Menu
+  // 3. New Order Flow start request
+  const isOrderingQuery = /order|chahiye|chahye|buy|mangwana|mangao|bhejo|lele/i.test(query);
+  const matchedItem = findMenuItem(query, context.menu);
+
+  if (matchedItem && isOrderingQuery) {
+    const newSession = {
+      step: 'waiting_for_quantity',
+      dishName: matchedItem.name,
+      price: matchedItem.price
+    };
+    whatsappSessions.set(fromNumber, newSession);
+    return `${matchedItem.name} ki kitni quantity chahiye?`;
+  }
+
+  // 4. Dish details query
+  if (matchedItem) {
+    return `*${matchedItem.name}* ka price ₹${matchedItem.price} hai.\nDescription: ${matchedItem.description || 'No description available'}.\n\nAap "order ${matchedItem.name.toLowerCase()}" bol kar order bhi kar sakte hain!`;
+  }
+
+  // 5. Menu query
   if (query.includes('menu') || query.includes('list') || query.includes('dishes') || query.includes('khana')) {
-    // Group by category
+    const isVegQuery = query.includes('veg') && !query.includes('non');
+    const isNonVegQuery = query.includes('non');
+
+    let itemsToDisplay = context.menu;
+    if (isVegQuery) {
+      itemsToDisplay = context.menu.filter(i => i.isVeg !== false);
+    } else if (isNonVegQuery) {
+      itemsToDisplay = context.menu.filter(i => i.isVeg === false);
+    }
+
+    if (itemsToDisplay.length === 0) {
+      return `Sorry, humare menu me abhi koi non-veg item nahi hai.`;
+    }
+
     const menuByCategory = {};
-    context.menu.forEach(item => {
+    itemsToDisplay.forEach(item => {
       const cat = item.category || 'Other';
       if (!menuByCategory[cat]) menuByCategory[cat] = [];
       menuByCategory[cat].push(item);
     });
 
-    let reply = `🍽️ *Royal Bites Menu*\n\n`;
+    let reply = `🍽️ *Royal Bites ${isVegQuery ? 'Veg ' : isNonVegQuery ? 'Non-Veg ' : ''}Menu*\n\n`;
     for (const [cat, items] of Object.entries(menuByCategory)) {
       reply += `*${cat}:*\n`;
       items.forEach(i => {
@@ -80,8 +206,18 @@ const getRuleBasedFallbackReply = (body, context) => {
     return reply;
   }
 
-  // 5. Offers & Coupons
-  if (query.includes('offer') || query.includes('coupon') || query.includes('discount') || query.includes('code') || query.includes('discount')) {
+  // 6. Veg filter
+  if (query.includes('veg') && !query.includes('non')) {
+    const vegItems = context.menu.filter(i => i.isVeg !== false);
+    let reply = `Here are popular veg dishes:\n`;
+    vegItems.slice(0, 5).forEach(i => {
+      reply += `• ${i.name} - ₹${i.price}\n`;
+    });
+    return reply;
+  }
+
+  // 7. Offers & Coupons
+  if (query.includes('offer') || query.includes('coupon') || query.includes('discount') || query.includes('code')) {
     let reply = `🎁 *Royal Bites Offers & Coupons* 🎁\n\n`;
     if (context.coupons && context.coupons.length > 0) {
       context.coupons.forEach(c => {
@@ -93,43 +229,43 @@ const getRuleBasedFallbackReply = (body, context) => {
     return reply;
   }
 
-  // 6. Address / Location
+  // 8. Address
   if (query.includes('address') || query.includes('location') || query.includes('kahan') || query.includes('bhopal') || query.includes('map')) {
     return `📍 *Royal Bites Address:*\nVIP Road, Bhopal, Madhya Pradesh\n\nGoogle Maps Location: https://maps.google.com/?q=VIP+Road+Bhopal`;
   }
 
-  // 7. Timing / Hours
+  // 9. Timings
   if (query.includes('timing') || query.includes('hour') || query.includes('open') || query.includes('close') || query.includes('kab') || query.includes('samay')) {
-    return `🕐 *Royal Bites Timings:*\n` +
+    return `*Royal Bites Timings:*\n` +
            `• Mon – Thu: 12:00 PM – 11:00 PM\n` +
            `• Fri – Sun: 12:00 PM – 12:00 AM\n\n` +
            `Kitchen closes 30 minutes before closing time.`;
   }
 
-  // 8. Order status
-  if (query.includes('order') || query.includes('status')) {
-    if (context.orders && context.orders.length > 0) {
-      const lastOrder = context.orders[0];
-      if (isHindi) {
-        return `Aapka aakhri order status:\n*Order ID:* ${lastOrder.id}\n*Status:* ${lastOrder.status}\n*Total:* ₹${lastOrder.total}\n\nAap isey yahan track kar sakte hain: https://royal-bites-restro.onrender.com/track-order/${lastOrder.id}`;
-      } else {
-        return `Your latest order status:\n*Order ID:* ${lastOrder.id}\n*Status:* ${lastOrder.status}\n*Total:* ₹${lastOrder.total}\n\nTrack here: https://royal-bites-restro.onrender.com/track-order/${lastOrder.id}`;
-      }
-    } else {
-      if (isHindi) {
-        return `Humein is number se koi active order nahi mila. Kripya aapna 6-digit Order ID share karein.`;
-      } else {
-        return `We couldn't find any recent orders associated with your number. Please share your Order ID.`;
-      }
-    }
-  }
+  // 10. Suggestions if user wants to order but dish not found in menu
+  if (isOrderingQuery) {
+    const cleanQuery = query.replace(/order|chahiye|chahye|buy|mangwana|mangao|bhejo|lele/g, '').trim();
+    const queryWords = cleanQuery.split(/\s+/).filter(w => w.length > 2);
+    const suggestions = context.menu.filter(item => {
+      const nameLower = item.name.toLowerCase();
+      return queryWords.some(word => nameLower.includes(word));
+    });
 
-  // 9. Table booking
-  if (query.includes('book') || query.includes('table')) {
-    if (isHindi) {
-      return `Table book karne ke liye, hamari booking website par jayein:\nhttps://royal-bites-restro.onrender.com/booking\nYahan aap date, time aur number of guests daal kar instant booking kar sakte hain.`;
+    if (suggestions.length > 0) {
+      let suggestText = `Sorry, humein wo dish nahi mili. Kya aap inme se kuch try karna chahenge?\n\n`;
+      suggestions.forEach(s => {
+        suggestText += `• *${s.name}* - ₹${s.price}\n`;
+      });
+      suggestText += `\nOrder karne ke liye likhein: *order [dish name]*`;
+      return suggestText;
     } else {
-      return `To book a table, please visit our booking page:\nhttps://royal-bites-restro.onrender.com/booking\nYou can select your preferred date, time, and number of guests.`;
+      const popularDishes = context.menu.filter(i => i.popular).slice(0, 3);
+      let suggestText = `Sorry, humein wo dish nahi mili. Hamari popular dishes hain:\n\n`;
+      popularDishes.forEach(s => {
+        suggestText += `• *${s.name}* - ₹${s.price}\n`;
+      });
+      suggestText += `\nExplore full menu: https://royal-bites-restro.onrender.com/menu`;
+      return suggestText;
     }
   }
 
@@ -235,18 +371,43 @@ const handleIncomingMessage = async (req, res) => {
     };
 
     // 4. Determine intent and rule-based reply
-    let ruleBasedReply = getRuleBasedFallbackReply(Body, context);
+    let ruleBasedReply = getRuleBasedFallbackReply(Body, context, From);
     let detectedIntent = 'General inquiry / No rule matched';
-    if (ruleBasedReply) {
-      if (Body.toLowerCase().includes('menu')) detectedIntent = 'Menu List';
-      else if (Body.toLowerCase().includes('price') || Body.toLowerCase().includes('rate')) detectedIntent = 'Price Check';
-      else if (Body.toLowerCase().includes('veg') && !Body.toLowerCase().includes('non')) detectedIntent = 'Veg Filter';
-      else if (Body.toLowerCase().includes('non')) detectedIntent = 'Non-Veg Filter';
-      else if (Body.toLowerCase().includes('offer') || Body.toLowerCase().includes('coupon')) detectedIntent = 'Offers & Coupons';
-      else if (Body.toLowerCase().includes('address') || Body.toLowerCase().includes('location')) detectedIntent = 'Address / Location';
-      else if (Body.toLowerCase().includes('timing')) detectedIntent = 'Timing / Hours';
-      else if (Body.toLowerCase().includes('book') || Body.toLowerCase().includes('table')) detectedIntent = 'Table Booking';
-      else if (Body.toLowerCase().includes('order') || Body.toLowerCase().includes('status')) detectedIntent = 'Order Status';
+    
+    // Check if session exists to trace intent
+    const session = whatsappSessions.get(From);
+
+    if (session) {
+      if (session.step === 'waiting_for_quantity') {
+        detectedIntent = 'Order Flow - Waiting for Quantity';
+      } else if (session.step === 'waiting_for_address') {
+        detectedIntent = 'Order Flow - Waiting for Address';
+      }
+    }
+
+    if (ruleBasedReply && !session) {
+      const qLower = Body.toLowerCase();
+      if (qLower.includes('menu')) detectedIntent = 'Menu List';
+      else if (qLower.includes('price') || qLower.includes('rate')) detectedIntent = 'Price Check';
+      else if (qLower.includes('veg') && !qLower.includes('non')) detectedIntent = 'Veg Filter';
+      else if (qLower.includes('non')) detectedIntent = 'Non-Veg Filter';
+      else if (qLower.includes('offer') || qLower.includes('coupon')) detectedIntent = 'Offers & Coupons';
+      else if (qLower.includes('address') || qLower.includes('location')) detectedIntent = 'Address / Location';
+      else if (qLower.includes('timing')) detectedIntent = 'Timing / Hours';
+      else if (qLower.includes('book') || qLower.includes('table')) detectedIntent = 'Table Booking';
+      else if (qLower.includes('order') || qLower.includes('status')) detectedIntent = 'Order Status';
+    }
+
+    // Save order in MongoDB if finalOrder is attached to session (Order Flow Completed)
+    if (session && session.finalOrder) {
+      try {
+        await Order.create(session.finalOrder);
+        console.log(`[DEBUG] WhatsApp order saved in MongoDB: ${session.finalOrder.id}`);
+        whatsappSessions.delete(From);
+        detectedIntent = 'Order Flow - Confirmed & Saved';
+      } catch (dbErr) {
+        console.error('[DEBUG Error] Failed to save WhatsApp order in MongoDB:', dbErr.message);
+      }
     }
 
     let reply = '';
