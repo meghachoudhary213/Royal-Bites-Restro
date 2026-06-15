@@ -1,9 +1,7 @@
-import { restaurantInfo } from '../data/menu';
+import { getWhatsAppLink } from '../utils/whatsappLink';
 
-export default function WhatsAppButton({ number }) {
-  const phone = (import.meta.env.VITE_WHATSAPP_NUMBER || number || '919691832020').replace(/\D/g, '');
-  const message = encodeURIComponent(restaurantInfo.whatsappMessage);
-  const url = `https://wa.me/${phone}?text=${message}`;
+export default function WhatsAppButton() {
+  const url = getWhatsAppLink("Hi Royal Bites, I want to explore the menu.");
 
   return (
     <a
@@ -26,8 +24,7 @@ export default function WhatsAppButton({ number }) {
   );
 }
 
-export function openWhatsApp(number) {
-  const phone = (import.meta.env.VITE_WHATSAPP_NUMBER || number || '919691832020').replace(/\D/g, '');
-  const message = encodeURIComponent(restaurantInfo.whatsappMessage);
-  window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
+export function openWhatsApp() {
+  const url = getWhatsAppLink("Hi Royal Bites, I want to explore the menu.");
+  window.open(url, '_blank');
 }

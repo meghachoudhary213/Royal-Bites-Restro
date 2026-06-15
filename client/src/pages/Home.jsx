@@ -19,15 +19,11 @@ export default function Home({
   onToggleFavourite,
   menuCategories,
 }) {
-  const [whatsappNumber, setWhatsappNumber] = useState(import.meta.env.VITE_WHATSAPP_NUMBER || '9691832020');
+  const [whatsappNumber, setWhatsappNumber] = useState(import.meta.env.VITE_WHATSAPP_NUMBER || '14155238886');
   const location = useLocation();
 
   useEffect(() => {
-    api.health()
-      .then((res) => {
-        if (res.whatsapp) setWhatsappNumber(res.whatsapp);
-      })
-      .catch(() => {});
+    setWhatsappNumber(import.meta.env.VITE_WHATSAPP_NUMBER || '14155238886');
   }, []);
 
   // Smooth scroll to hash elements when landing on the home page

@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { restaurantInfo } from '../data/menu';
 import { api } from '../api/api';
+import { getWhatsAppLink } from '../utils/whatsappLink';
 import { showSuccess, showError, showWarning, showInfo, showLoading, resolveLoading } from '../utils/toast';
 import { toast } from 'react-hot-toast';
 
@@ -364,11 +365,10 @@ export default function CheckoutModal({
     message += `*Special Instructions:* ${instructionsText}\n\n`;
     message += `Please confirm my order and prepare the feast!`;
 
-    const encoded = encodeURIComponent(message);
-    const whatsappNum = (import.meta.env.VITE_WHATSAPP_NUMBER || restaurantInfo.phone).replace(/[^0-9]/g, '');
+    const url = getWhatsAppLink(message);
     
     // Redirect to WhatsApp
-    window.open(`https://wa.me/${whatsappNum}?text=${encoded}`, '_blank');
+    window.open(url, '_blank');
 
     // Show order confirmation screen
     setConfirmedOrder(newOrder);

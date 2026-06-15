@@ -1,6 +1,6 @@
 import { X, Star, ShoppingBag } from 'lucide-react';
 import { useEffect } from 'react';
-import { restaurantInfo } from '../data/menu';
+import { getWhatsAppLink } from '../utils/whatsappLink';
 
 const VegIndicator = ({ isVeg }) => (
   <span 
@@ -36,9 +36,8 @@ export default function FoodDetailsModal({ item, onClose, onAddToCart }) {
 
   const handleWhatsAppOrder = () => {
     const message = `Hi Royal Bites, I would like to order "${item.name}" (Price: ₹${item.price}). Please confirm my order!`;
-    const encoded = encodeURIComponent(message);
-    const whatsappNum = (import.meta.env.VITE_WHATSAPP_NUMBER || restaurantInfo.phone).replace(/[^0-9]/g, '');
-    window.open(`https://wa.me/${whatsappNum}?text=${encoded}`, '_blank');
+    const url = getWhatsAppLink(message);
+    window.open(url, '_blank');
   };
 
   return (
