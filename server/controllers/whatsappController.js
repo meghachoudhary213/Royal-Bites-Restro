@@ -3,7 +3,7 @@ const Coupon = require('../models/Coupon');
 const Order = require('../models/Order');
 const Booking = require('../models/Booking');
 const WhatsAppMessage = require('../models/WhatsAppMessage');
-const { getGrokReply } = require('../services/grokRestaurantAssistant');
+const { getGrokReply, formatGrokReply } = require('../services/grokRestaurantAssistant');
 const { sendWhatsAppMessage } = require('../services/twilioWhatsAppService');
 
 // Static menu fallback if MongoDB MenuItem collection is empty
@@ -19,61 +19,94 @@ const fallbackMenu = [
   { name: 'Gulab Jamun', category: 'Desserts', price: 99, description: 'Soft milk-solid balls soaked in sugar syrup', isVeg: true, rating: 4.8 }
 ];
 
-// Fallback rule-based replies if Grok xAI API fails
+// Fallback rule-based replies
 const getRuleBasedFallbackReply = (body, context) => {
-  const query = body.toLowerCase();
+  const query = body.toLowerCase().trim();
   const isHindi = /dikhao|batao|karni|hai|mera|kya|bhedo|dekhna/i.test(query);
 
-  if (query.includes('menu')) {
+  // 1. Specific dish lookup (e.g. "paneer tikka price", "paneer tikka rate")
+  const matchedItem = context.menu.find(item => query.includes(item.name.toLowerCase()));
+  if (matchedItem && (query.includes('price') || query.includes('rate') || query.includes('cost') || query.includes('rupaye') || query.includes('rupees') || query.includes('paise') || query.includes('detail') || query.includes('kya'))) {
     if (isHindi) {
-      return `*Royal Bites Menu:*\n` +
-             `• Paneer Butter Masala — ₹249\n` +
-             `• Paneer Tikka — ₹229\n` +
-             `• Veg Supreme Pizza — ₹299\n` +
-             `• Chole Bhature — ₹169\n` +
-             `• Dal Makhani — ₹199\n` +
-             `• Veg Spring Roll — ₹179\n\n` +
-             `Pura menu dekhne ke liye hamari website par jayein: https://royal-bites-restro.onrender.com/menu`;
+      return `*${matchedItem.name}* ₹${matchedItem.price} hai.\nDescription: ${matchedItem.description || 'No description available'}.`;
     } else {
-      return `*Royal Bites Menu:*\n` +
-             `• Paneer Butter Masala — ₹249\n` +
-             `• Paneer Tikka — ₹229\n` +
-             `• Veg Supreme Pizza — ₹299\n` +
-             `• Chole Bhature — ₹169\n` +
-             `• Dal Makhani — ₹199\n` +
-             `• Veg Spring Roll — ₹179\n\n` +
-             `Explore full menu on our website: https://royal-bites-restro.onrender.com/menu`;
+      return `*${matchedItem.name}* is ₹${matchedItem.price}.\nDescription: ${matchedItem.description || 'No description available'}.`;
     }
   }
 
-  if (query.includes('paneer') && query.includes('price')) {
-    return `*Paneer Butter Masala* ka price ₹249 hai aur *Paneer Tikka* ka price ₹229 hai.`;
+  // 2. Veg dishes
+  if (query.includes('veg') && !query.includes('non')) {
+    const vegItems = context.menu.filter(i => i.isVeg !== false);
+    let reply = `Here are popular veg dishes:\n`;
+    vegItems.slice(0, 6).forEach(i => {
+      reply += `• ${i.name} - ₹${i.price}\n`;
+    });
+    return reply;
   }
 
-  if (query.includes('veg')) {
-    return `*Veg Dishes:*\n` +
-           `• Paneer Butter Masala (₹249)\n` +
-           `• Paneer Tikka (₹229)\n` +
-           `• Veg Supreme Pizza (₹299)\n` +
-           `• Dal Makhani (₹199)\n` +
-           `• Chole Bhature (₹169)\n\n` +
-           `Hamare menu me saare options vegetarian hain (except select Biryanis).`;
-  }
-
-  if (query.includes('offer') || query.includes('coupon') || query.includes('discount')) {
-    return `*Royal Bites Offers:*\n` +
-           `• Use code *ROYAL10* to get 10% flat discount on orders above ₹500.\n` +
-           `• Use code *FREEBAR* to get a free soft drink on orders above ₹1000!`;
-  }
-
-  if (query.includes('book') || query.includes('table')) {
-    if (isHindi) {
-      return `Table book karne ke liye, hamari booking website par jayein:\nhttps://royal-bites-restro.onrender.com/booking\nYahan aap date, time aur number of guests daal kar instant booking kar sakte hain.`;
+  // 3. Non-veg dishes
+  if (query.includes('non veg') || query.includes('nonveg')) {
+    const nonVegItems = context.menu.filter(i => i.isVeg === false);
+    let reply = `Here are popular non-veg dishes:\n`;
+    if (nonVegItems.length > 0) {
+      nonVegItems.slice(0, 6).forEach(i => {
+        reply += `• ${i.name} - ₹${i.price}\n`;
+      });
     } else {
-      return `To book a table, please visit our booking page:\nhttps://royal-bites-restro.onrender.com/booking\nYou can select your preferred date, time, and number of guests.`;
+      reply += `Currently all our dishes are vegetarian.`;
     }
+    return reply;
   }
 
+  // 4. Menu
+  if (query.includes('menu') || query.includes('list') || query.includes('dishes') || query.includes('khana')) {
+    // Group by category
+    const menuByCategory = {};
+    context.menu.forEach(item => {
+      const cat = item.category || 'Other';
+      if (!menuByCategory[cat]) menuByCategory[cat] = [];
+      menuByCategory[cat].push(item);
+    });
+
+    let reply = `🍽️ *Royal Bites Menu*\n\n`;
+    for (const [cat, items] of Object.entries(menuByCategory)) {
+      reply += `*${cat}:*\n`;
+      items.forEach(i => {
+        reply += `• ${i.name} - ₹${i.price}\n`;
+      });
+      reply += `\n`;
+    }
+    reply += `Type dish name for price/details.`;
+    return reply;
+  }
+
+  // 5. Offers & Coupons
+  if (query.includes('offer') || query.includes('coupon') || query.includes('discount') || query.includes('code') || query.includes('discount')) {
+    let reply = `🎁 *Royal Bites Offers & Coupons* 🎁\n\n`;
+    if (context.coupons && context.coupons.length > 0) {
+      context.coupons.forEach(c => {
+        reply += `• *${c.code}* - ${c.description || `${c.discountValue}% off`}\n`;
+      });
+    } else {
+      reply += `• *ROYAL20* - 20% off on first table booking.\n• *FREEGIFT* - Free dessert on orders above ₹999.\n`;
+    }
+    return reply;
+  }
+
+  // 6. Address / Location
+  if (query.includes('address') || query.includes('location') || query.includes('kahan') || query.includes('bhopal') || query.includes('map')) {
+    return `📍 *Royal Bites Address:*\nVIP Road, Bhopal, Madhya Pradesh\n\nGoogle Maps Location: https://maps.google.com/?q=VIP+Road+Bhopal`;
+  }
+
+  // 7. Timing / Hours
+  if (query.includes('timing') || query.includes('hour') || query.includes('open') || query.includes('close') || query.includes('kab') || query.includes('samay')) {
+    return `🕐 *Royal Bites Timings:*\n` +
+           `• Mon – Thu: 12:00 PM – 11:00 PM\n` +
+           `• Fri – Sun: 12:00 PM – 12:00 AM\n\n` +
+           `Kitchen closes 30 minutes before closing time.`;
+  }
+
+  // 8. Order status
   if (query.includes('order') || query.includes('status')) {
     if (context.orders && context.orders.length > 0) {
       const lastOrder = context.orders[0];
@@ -91,18 +124,22 @@ const getRuleBasedFallbackReply = (body, context) => {
     }
   }
 
-  if (query.includes('address') || query.includes('location') || query.includes('kahan')) {
-    return `*Royal Bites Address:*\nVIP Road, Bhopal, Madhya Pradesh\n\nGoogle Maps Location: https://maps.google.com/?q=VIP+Road+Bhopal`;
+  // 9. Table booking
+  if (query.includes('book') || query.includes('table')) {
+    if (isHindi) {
+      return `Table book karne ke liye, hamari booking website par jayein:\nhttps://royal-bites-restro.onrender.com/booking\nYahan aap date, time aur number of guests daal kar instant booking kar sakte hain.`;
+    } else {
+      return `To book a table, please visit our booking page:\nhttps://royal-bites-restro.onrender.com/booking\nYou can select your preferred date, time, and number of guests.`;
+    }
   }
 
-  if (query.includes('timing') || query.includes('hour') || query.includes('open') || query.includes('kab')) {
-    return `*Royal Bites Timings:*\n` +
-           `• Mon – Thu: 12:00 PM – 11:00 PM\n` +
-           `• Fri – Sun: 12:00 PM – 12:00 AM\n` +
-           `Kitchen closes 30 minutes before closing time.`;
-  }
+  return null; // No rule matched
+};
 
-  // Default reply
+// Default welcome fallback if Grok fails and no rule matched
+const getDefaultFallbackReply = (body) => {
+  const query = body.toLowerCase().trim();
+  const isHindi = /namaste|helo|hi|kya|batao/i.test(query);
   if (isHindi) {
     return `Namaste! 🙏 Royal Bites AI Assistant me aapka swagat hai. Main aapki kya sahayata kar sakta hoon?\n\nAap mujhse pooch sakte hain:\n` +
            `• *Menu dikhao* (Menu dekhne ke liye)\n` +
@@ -136,7 +173,7 @@ const handleIncomingMessage = async (req, res) => {
   // Send an immediate 200 OK Response to Twilio to prevent timeout
   res.type('text/xml').send('<Response></Response>');
 
-  // 1. Log incoming message in DB (Non-blocking so it doesn't block the reply if DB is disconnected/slow)
+  // 1. Log incoming message in DB (Non-blocking)
   try {
     WhatsAppMessage.create({
       from: From,
@@ -197,19 +234,58 @@ const handleIncomingMessage = async (req, res) => {
       customerPhone: From
     };
 
-    let reply = '';
-
-    // 4. Request response from Grok xAI API
-    try {
-      console.log('[DEBUG] Querying Grok xAI API...');
-      reply = await getGrokReply(Body, context);
-      console.log(`[DEBUG] Generated AI Response: "${reply}"`);
-    } catch (grokError) {
-      console.error('[DEBUG Error] Grok xAI API call failed:', grokError.message || grokError);
-      // Fallback as requested by user
-      reply = "Hello from Royal Bites. How can I help you?";
-      console.log(`[DEBUG] Using Fallback Reply: "${reply}"`);
+    // 4. Determine intent and rule-based reply
+    let ruleBasedReply = getRuleBasedFallbackReply(Body, context);
+    let detectedIntent = 'General inquiry / No rule matched';
+    if (ruleBasedReply) {
+      if (Body.toLowerCase().includes('menu')) detectedIntent = 'Menu List';
+      else if (Body.toLowerCase().includes('price') || Body.toLowerCase().includes('rate')) detectedIntent = 'Price Check';
+      else if (Body.toLowerCase().includes('veg') && !Body.toLowerCase().includes('non')) detectedIntent = 'Veg Filter';
+      else if (Body.toLowerCase().includes('non')) detectedIntent = 'Non-Veg Filter';
+      else if (Body.toLowerCase().includes('offer') || Body.toLowerCase().includes('coupon')) detectedIntent = 'Offers & Coupons';
+      else if (Body.toLowerCase().includes('address') || Body.toLowerCase().includes('location')) detectedIntent = 'Address / Location';
+      else if (Body.toLowerCase().includes('timing')) detectedIntent = 'Timing / Hours';
+      else if (Body.toLowerCase().includes('book') || Body.toLowerCase().includes('table')) detectedIntent = 'Table Booking';
+      else if (Body.toLowerCase().includes('order') || Body.toLowerCase().includes('status')) detectedIntent = 'Order Status';
     }
+
+    let reply = '';
+    let grokResponse = 'N/A';
+    let fallbackReason = 'None';
+
+    if (ruleBasedReply) {
+      // Rule-based matched. Try to use Grok only for natural language formatting.
+      try {
+        console.log(`[DEBUG] Rule-based reply found. Requesting Grok natural language formatting...`);
+        grokResponse = await formatGrokReply(Body, ruleBasedReply);
+        reply = grokResponse;
+      } catch (grokError) {
+        fallbackReason = `Grok formatting failed: ${grokError.message || grokError}. Reverting to raw structured response.`;
+        console.warn(`[DEBUG Warning] ${fallbackReason}`);
+        reply = ruleBasedReply;
+      }
+    } else {
+      // General question. Ask Grok normally.
+      try {
+        console.log(`[DEBUG] Querying Grok xAI API normally for: "${Body}"...`);
+        grokResponse = await getGrokReply(Body, context);
+        reply = grokResponse;
+      } catch (grokError) {
+        fallbackReason = `Grok normal chat failed: ${grokError.message || grokError}. Using default welcome menu.`;
+        console.warn(`[DEBUG Warning] ${fallbackReason}`);
+        reply = getDefaultFallbackReply(Body);
+      }
+    }
+
+    // Print all detailed logs as requested by the user
+    console.log('------------------------------------------');
+    console.log(`[DEBUG LOG] Incoming message body: "${Body}"`);
+    console.log(`[DEBUG LOG] Detected intent: "${detectedIntent}"`);
+    console.log(`[DEBUG LOG] Selected menu data count: ${context.menu.length}`);
+    console.log(`[DEBUG LOG] Grok API response: "${grokResponse}"`);
+    console.log(`[DEBUG LOG] Fallback reason: "${fallbackReason}"`);
+    console.log(`[DEBUG LOG] Final reply sent: "${reply}"`);
+    console.log('------------------------------------------');
 
     // 5. Send the reply via Twilio WhatsApp API
     try {
@@ -238,5 +314,6 @@ const handleIncomingMessage = async (req, res) => {
 };
 
 module.exports = {
-  handleIncomingMessage
+  handleIncomingMessage,
+  getRuleBasedFallbackReply
 };

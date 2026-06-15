@@ -73,6 +73,59 @@ Guidelines:
   }
 };
 
+/**
+ * Uses Grok xAI API to format a structured reply naturally
+ * @param {string} userMessage - User's original query
+ * @param {string} structuredReply - The rule-based structured response
+ */
+const formatGrokReply = async (userMessage, structuredReply) => {
+  if (!apiKey) {
+    throw new Error('XAI_API_KEY is not defined in environment variables');
+  }
+
+  const systemMessage = `
+You are the AI Restaurant Assistant for "Royal Bites".
+Your task is to take the structured database response below and format it into a natural, warm, polite, and elegant message in the same language as the customer's message (Hindi, Hinglish, or English).
+Make sure to:
+1. Retain all exact prices, names, phone numbers, and URLs.
+2. Keep the formatting clean and easy to read on WhatsApp (use bullet points and bold text *like this*).
+3. Do not add any new facts or dishes not present in the structured response.
+
+Structured Response:
+${structuredReply}
+`;
+
+  try {
+    const response = await fetch('https://api.x.ai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: modelName,
+        messages: [
+          { role: 'system', content: systemMessage },
+          { role: 'user', content: userMessage }
+        ],
+        temperature: 0.3
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error?.message || `xAI API returned status ${response.status}`);
+    }
+
+    return data.choices[0].message.content;
+  } catch (error) {
+    console.error('Error formatting reply with Grok xAI API:', error.message);
+    throw error;
+  }
+};
+
 module.exports = {
-  getGrokReply
+  getGrokReply,
+  formatGrokReply
 };
