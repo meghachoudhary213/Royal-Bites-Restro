@@ -457,34 +457,37 @@ const getDefaultFallbackReply = (body) => {
 };
 
 const handleIncomingMessage = async (req, res) => {
+  let reply = '';
+  let detectedIntent = 'General inquiry / No rule matched';
   const { From, To, Body } = req.body;
 
-  if (!From || !Body) {
-    console.error('[DEBUG Error] Webhook received missing parameters. Body:', req.body);
-    return res.status(400).json({ success: false, error: 'Missing From or Body parameters' });
-  }
-
-  console.log('[DEBUG] --- Incoming WhatsApp Webhook Request ---');
-  console.log(`[DEBUG] Sender Number (From): ${From}`);
-  console.log(`[DEBUG] Recipient Number (To): ${To}`);
-  console.log(`[DEBUG] Message Body: "${Body}"`);
-
-  // Send an immediate 200 OK Response to Twilio to prevent timeout
-  res.type('text/xml').send('<Response></Response>');
-
-  // 1. Log incoming message in DB (Non-blocking)
   try {
-    WhatsAppMessage.create({
-      from: From,
-      to: To || 'whatsapp:+919691832020',
-      body: Body,
-      direction: 'inbound'
-    }).catch(err => console.error('[DEBUG Error] Async DB logging failed for incoming message:', err.message));
-  } catch (dbErr) {
-    console.error('[DEBUG Error] Failed to log incoming message to DB:', dbErr.message);
-  }
+    if (!From || !Body) {
+      console.error('[DEBUG Error] Webhook received missing parameters. Body:', req.body);
+      const twiml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Message><![CDATA[Error: Missing From or Body parameters.]]></Message>
+</Response>`;
+      return res.type('text/xml').status(400).send(twiml);
+    }
 
-  try {
+    console.log('[DEBUG] --- Incoming WhatsApp Webhook Request ---');
+    console.log(`[DEBUG] Sender Number (From): ${From}`);
+    console.log(`[DEBUG] Recipient Number (To): ${To}`);
+    console.log(`[DEBUG] Message Body: "${Body}"`);
+
+    // 1. Log incoming message in DB (Non-blocking)
+    try {
+      WhatsAppMessage.create({
+        from: From,
+        to: To || 'whatsapp:+919691832020',
+        body: Body,
+        direction: 'inbound'
+      }).catch(err => console.error('[DEBUG Error] Async DB logging failed for incoming message:', err.message));
+    } catch (dbErr) {
+      console.error('[DEBUG Error] Failed to log incoming message to DB:', dbErr.message);
+    }
+
     // 2. Extract last 10 digits of phone number to query MongoDB context
     const phoneDigits = From.replace(/\D/g, '');
     const last10Digits = phoneDigits.slice(-10);
@@ -533,9 +536,9 @@ const handleIncomingMessage = async (req, res) => {
       customerPhone: From
     };
 
-    // 4. Determine intent and rule-based reply
+    // 4. Find matched item and determine intent and rule-based reply
+    const matchedItem = findMenuItem(Body, context.menu);
     let ruleBasedReply = getRuleBasedFallbackReply(Body, context, From);
-    let detectedIntent = 'General inquiry / No rule matched';
     
     // Check if session exists to trace intent
     const session = whatsappSessions.get(From);
@@ -575,7 +578,6 @@ const handleIncomingMessage = async (req, res) => {
       }
     }
 
-    let reply = '';
     let grokResponse = 'N/A';
     let fallbackReason = 'None';
 
@@ -605,7 +607,8 @@ const handleIncomingMessage = async (req, res) => {
 
     // Print all detailed logs as requested by the user
     console.log('------------------------------------------');
-    console.log(`[DEBUG LOG] Incoming message body: "${Body}"`);
+    console.log(`[DEBUG LOG] Incoming message from: "${From}"`);
+    console.log(`[DEBUG LOG] Message body: "${Body}"`);
     console.log(`[DEBUG LOG] Detected intent: "${detectedIntent}"`);
     console.log(`[DEBUG LOG] Selected menu data count: ${context.menu.length}`);
     console.log(`[DEBUG LOG] Grok API response: "${grokResponse}"`);
@@ -613,13 +616,20 @@ const handleIncomingMessage = async (req, res) => {
     console.log(`[DEBUG LOG] Final reply sent: "${reply}"`);
     console.log('------------------------------------------');
 
-    // 5. Send the reply via Twilio WhatsApp API
-    try {
-      console.log(`[DEBUG] Twilio Send: Attempting message send to ${From}...`);
-      const twilioResponse = await sendWhatsAppMessage(From, reply);
-      console.log('[DEBUG] Twilio Send Response (Success):', JSON.stringify(twilioResponse));
-    } catch (twilioError) {
-      console.error('[DEBUG Error] Twilio SDK messages.create call failed. Full Twilio Error:', twilioError);
+    // Send the TwiML response synchronously to Twilio (Content-Type: text/xml)
+    const twiml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Message><![CDATA[${reply}]]></Message>
+</Response>`;
+    res.type('text/xml').send(twiml);
+
+    // 5. Send backup copy via Twilio REST API asynchronously if API keys are valid (optional)
+    if (process.env.TWILIO_ACCOUNT_SID && !process.env.TWILIO_ACCOUNT_SID.startsWith('ACXXXX')) {
+      try {
+        await sendWhatsAppMessage(From, reply);
+      } catch (twilioErr) {
+        console.warn('[DEBUG Warning] Optional async REST API fallback send failed (likely placeholder credentials).');
+      }
     }
 
     // 6. Log outgoing message in DB (Non-blocking)
@@ -636,6 +646,20 @@ const handleIncomingMessage = async (req, res) => {
 
   } catch (err) {
     console.error('[DEBUG Error] Exception caught in webhook processing:', err.message || err);
+    
+    // Return safe fallback message in TwiML format to prevent Twilio webhook timeout
+    const fallbackText = getDefaultFallbackReply(Body);
+    const twiml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Message><![CDATA[${fallbackText}]]></Message>
+</Response>`;
+    try {
+      if (!res.headersSent) {
+        res.type('text/xml').send(twiml);
+      }
+    } catch (sendErr) {
+      console.error('[DEBUG Error] Failed to send fallback TwiML reply after main exception:', sendErr.message);
+    }
   }
 };
 
