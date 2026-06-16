@@ -81,6 +81,16 @@ const getLevenshteinDistance = (a, b) => {
   return matrix[b.length][a.length];
 };
 
+// Common Hinglish/Hindi/English stop words to ignore in fuzzy menu matching
+const STOP_WORDS = new Set([
+  'hai', 'kya', 'bhi', 'aur', 'toh', 'sath', 'ko', 'se', 'ke', 'ka', 'ki', 
+  'main', 'mera', 'apna', 'mujhe', 'karna', 'karni', 'batao', 'dikhao', 'bhedo',
+  'dekhna', 'kahan', 'kaha', 'padega', 'bhopal', 'road', 'vip', 'timing', 'samay',
+  'kab', 'open', 'close', 'delivery', 'payment', 'upi', 'cash', 'cod', 'card', 
+  'table', 'booking', 'book', 'seat', 'reserve', 'reservation', 'offer', 'coupon', 
+  'discount', 'code', 'sasta', 'track', 'status', 'order', 'please', 'the', 'and'
+]);
+
 // Helper to find menu item using robust matching for Hinglish inputs
 const findMenuItem = (query, menu) => {
   const queryLower = query.toLowerCase().trim();
@@ -184,7 +194,7 @@ const findMenuItem = (query, menu) => {
   }
 
   // 3. Fallback token-level fuzzy match (using Levenshtein on normalized tokens)
-  const queryWords = queryLower.split(/\s+/).filter(w => w.length > 2);
+  const queryWords = queryLower.split(/\s+/).filter(w => w.length > 2 && !STOP_WORDS.has(w));
   const normalizedQueryWords = queryWords.map(normalizeWord);
 
   for (const item of menu) {
@@ -194,8 +204,11 @@ const findMenuItem = (query, menu) => {
     for (const nq of normalizedQueryWords) {
       for (const ni of normalizedItemWords) {
         if (nq === ni) return item; // exact normalized match
-        const dist = getLevenshteinDistance(nq, ni);
-        if (dist <= 1) return item; // 1 character spelling error tolerance
+        // Only allow fuzzy match for words longer than 3 characters
+        if (nq.length > 3 && ni.length > 3) {
+          const dist = getLevenshteinDistance(nq, ni);
+          if (dist <= 1) return item; // 1 character spelling error tolerance
+        }
       }
     }
   }
@@ -292,7 +305,34 @@ const getRuleBasedFallbackReply = (body, context, fromNumber) => {
     }
   }
 
-  // 3. Table Booking
+  // 3. Restaurant Address check (Timing/Address Priority first)
+  if (/address|location|kaha|kahan|map|direction|rasta|road|place|bhopal|located|pata/i.test(query)) {
+    return `📍 *Royal Bites Location:*\n` +
+           `VIP Road, Bhopal, Madhya Pradesh.\n\n` +
+           `Google Maps Direction Link: https://maps.google.com/?q=VIP+Road+Bhopal`;
+  }
+
+  // 4. Timings check
+  if (/timing|hour|time|open|close|kab|samay|khulta|band/i.test(query)) {
+    return `⏰ *Royal Bites Timings:*\n` +
+           `• Monday – Thursday: 12:00 PM – 11:00 PM\n` +
+           `• Friday – Sunday: 12:00 PM – 12:00 AM\n\n` +
+           `Kitchen closing hours se 30 mins pehle close ho jata hai.`;
+  }
+
+  // 5. Payment check
+  if (/payment|upi|cash|cod|card|pay|gp|phonepe|paytm|wallet/i.test(query)) {
+    return `💳 *Payment Options:*\n` +
+           `Hum Google Pay, PhonePe, Paytm, BHIM UPI, Credit/Debit Cards, aur Cash on Delivery (COD) accept karte hain! Haan, UPI chalega.`;
+  }
+
+  // 6. Delivery check
+  if (/delivery|deliver|ghar|home|charge/i.test(query)) {
+    return `🛵 *Home Delivery:*\n` +
+           `Haan ji, home delivery available hai! ₹500 se upar ke orders par free delivery hai. Isse kam ke orders par ₹40 delivery charge apply hota hai.`;
+  }
+
+  // 7. Table Booking
   if (/table|booking|book|seat|reserve|reservation/i.test(query)) {
     return `🍽️ *Table Booking:*\n` +
            `Haan, Royal Bites me table booking available hai!\n` +
@@ -300,7 +340,7 @@ const getRuleBasedFallbackReply = (body, context, fromNumber) => {
            `Ya fir mujhe apna *Naam, Date, Time, aur Guests ki sankhya* bataiye, main book kar dunga!`;
   }
 
-  // 4. Recommendations / Specials / Best food queries
+  // 8. Recommendations / Specials / Best food queries
   const isRecommendQuery = /best|recommend|suggest|accha|achha|special|popular|swad|tasty/i.test(query);
   if (isRecommendQuery) {
     if (/pizza|piza|pijja|pija/i.test(query)) {
@@ -330,7 +370,7 @@ const getRuleBasedFallbackReply = (body, context, fromNumber) => {
            `• *Dessert:* Rasmalai (₹119)`;
   }
 
-  // 5. Food Order request check (Separate from tracking)
+  // 9. Food Order / Menu Item Lookup (Only runs if timing, address, etc. didn't match!)
   const matchedItem = findMenuItem(query, context.menu);
   const isOrderingQuery = /order|chahiye|chahye|buy|mangwana|mangao|bhejo|lele/i.test(query);
 
@@ -348,41 +388,14 @@ const getRuleBasedFallbackReply = (body, context, fromNumber) => {
     }
   }
 
-  // 6. Dish price / details check
+  // Dish price / details check (Lookup)
   if (matchedItem) {
     return `*${matchedItem.name}* ka price ₹${matchedItem.price} hai.\n` +
            `*Description:* ${matchedItem.description || 'No description available'}.\n\n` +
            `Isey order karne ke liye likhein: "order ${matchedItem.name.toLowerCase()}"`;
   }
 
-  // 7. Restaurant Address check
-  if (/address|location|kaha|kahan|map|direction|rasta|road|place|bhopal|located|pata/i.test(query)) {
-    return `📍 *Royal Bites Location:*\n` +
-           `VIP Road, Bhopal, Madhya Pradesh.\n\n` +
-           `Google Maps Direction Link: https://maps.google.com/?q=VIP+Road+Bhopal`;
-  }
-
-  // 8. Timings check
-  if (/timing|hour|time|open|close|kab|samay|khulta|band/i.test(query)) {
-    return `⏰ *Royal Bites Timings:*\n` +
-           `• Monday – Thursday: 12:00 PM – 11:00 PM\n` +
-           `• Friday – Sunday: 12:00 PM – 12:00 AM\n\n` +
-           `Kitchen closing hours se 30 mins pehle close ho jata hai.`;
-  }
-
-  // 9. Delivery check
-  if (/delivery|deliver|ghar|home|charge/i.test(query)) {
-    return `🛵 *Home Delivery:*\n` +
-           `Haan ji, home delivery available hai! ₹500 se upar ke orders par free delivery hai. Isse kam ke orders par ₹40 delivery charge apply hota hai.`;
-  }
-
-  // 10. Payment check
-  if (/payment|upi|cash|cod|card|pay|gp|phonepe|paytm|wallet/i.test(query)) {
-    return `💳 *Payment Options:*\n` +
-           `Hum Google Pay, PhonePe, Paytm, BHIM UPI, Credit/Debit Cards, aur Cash on Delivery (COD) accept karte hain! Haan, UPI chalega.`;
-  }
-
-  // 11. Offers check
+  // 10. Offers check
   if (/offer|coupon|discount|code|sasta|choot|sale|coupons|offers/i.test(query)) {
     let reply = `🎁 *Royal Bites Active Offers* 🎁\n\n`;
     if (context.coupons && context.coupons.length > 0) {
@@ -397,7 +410,7 @@ const getRuleBasedFallbackReply = (body, context, fromNumber) => {
     return reply;
   }
 
-  // 12. Menu inquiry
+  // 11. Menu list inquiry
   if (/menu|list|khana|dish|dishes|catalog|item/i.test(query)) {
     const isVegQuery = query.includes('veg') && !query.includes('non');
     const isNonVegQuery = query.includes('non');
@@ -553,17 +566,17 @@ const handleIncomingMessage = async (req, res) => {
 
     if (ruleBasedReply && !session) {
       const qLower = Body.toLowerCase();
-      if (/menu|list|khana|dish|dishes|catalog|item/i.test(qLower)) detectedIntent = 'Menu';
-      else if (/best|recommend|suggest|accha|achha|special|popular/i.test(qLower)) detectedIntent = 'Recommendations';
-      else if (/table|booking|book|seat|reserve|reservation/i.test(qLower)) detectedIntent = 'Table Booking';
-      else if (/track|status|kaha|kahan|check|id/i.test(qLower) && /order/i.test(qLower)) detectedIntent = 'Order Status Tracking';
-      else if (/order|chahiye|chahye|buy|mangwana|mangao|bhejo|lele/i.test(qLower)) detectedIntent = 'Order Food Flow';
-      else if (matchedItem) detectedIntent = 'Price / Details';
+      if (/track|status|kaha|kahan|check|id/i.test(qLower) && /order/i.test(qLower)) detectedIntent = 'Order Status Tracking';
       else if (/address|location|kaha|kahan|map|direction|rasta|road|place|bhopal|located/i.test(qLower)) detectedIntent = 'Restaurant Address';
       else if (/timing|hour|time|open|close|kab|samay|khulta|band/i.test(qLower)) detectedIntent = 'Timing / Hours';
-      else if (/delivery|deliver|ghar|home|charge/i.test(qLower)) detectedIntent = 'Delivery';
       else if (/payment|upi|cash|cod|card|pay/i.test(qLower)) detectedIntent = 'Payment Options';
+      else if (/delivery|deliver|ghar|home|charge/i.test(qLower)) detectedIntent = 'Delivery';
+      else if (/table|booking|book|seat|reserve|reservation/i.test(qLower)) detectedIntent = 'Table Booking';
+      else if (/best|recommend|suggest|accha|achha|special|popular/i.test(qLower)) detectedIntent = 'Recommendations';
+      else if (/order|chahiye|chahye|buy|mangwana|mangao|bhejo|lele/i.test(qLower)) detectedIntent = 'Order Food Flow';
+      else if (matchedItem) detectedIntent = 'Price / Details';
       else if (/offer|coupon|discount|code|sasta|choot|sale|coupons|offers/i.test(qLower)) detectedIntent = 'Offers & Coupons';
+      else if (/menu|list|khana|dish|dishes|catalog|item/i.test(qLower)) detectedIntent = 'Menu';
     }
 
     // Save order in MongoDB if finalOrder is attached to session (Order Flow Completed)
