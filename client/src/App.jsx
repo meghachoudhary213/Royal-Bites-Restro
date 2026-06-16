@@ -421,6 +421,15 @@ export default function App() {
           />
         } 
       />
+      <Route 
+        path="/royal-admin-login" 
+        element={
+          <AdminDashboard 
+            menuCategories={menuCategories} 
+            onUpdateMenu={handleUpdateMenu} 
+          />
+        } 
+      />
     </Routes>
     </>
   );

@@ -62,12 +62,7 @@ export default function Navbar({
               </Link>
             ))}
             
-            <Link
-              to="/admin"
-              className="text-xs uppercase tracking-widest text-pink-soft/80 hover:text-pink transition-colors mr-2"
-            >
-              Admin
-            </Link>
+
 
             {/* Desktop Auth Section */}
             {currentUser ? (
@@ -171,13 +166,7 @@ export default function Navbar({
                 {link.label}
               </Link>
             ))}
-            <Link
-              to="/admin"
-              onClick={() => setMobileOpen(false)}
-              className="block py-2 text-pink-soft/80 font-medium"
-            >
-              Admin Dashboard
-            </Link>
+
 
             {/* Mobile Auth options */}
             {currentUser ? (
