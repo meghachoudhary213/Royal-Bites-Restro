@@ -216,289 +216,37 @@ const findMenuItem = (query, menu) => {
   return null;
 };
 
-// Fallback rule-based replies
-const getRuleBasedFallbackReply = (body, context, fromNumber) => {
-  const query = body.toLowerCase().trim();
-  
-  // Business contact number formatted from config or fallback
-  const contactNo = process.env.WHATSAPP_NUMBER ? `+91 ${process.env.WHATSAPP_NUMBER}` : '+91 9691832020';
-
-  // 1. Session flow processing if an order session is in progress
-  const session = whatsappSessions.get(fromNumber);
-  if (session) {
-    if (/cancel|abort|stop|hatao|band karo/i.test(query)) {
-      whatsappSessions.delete(fromNumber);
-      return `Aapka order cancel kar diya hai. Kuch aur order karna chahein toh bataiye!`;
-    }
-
-    if (session.step === 'waiting_for_quantity') {
-      const qty = parseInt(body.replace(/\D/g, ''), 10);
-      if (isNaN(qty) || qty <= 0) {
-        return `Kripya quantity numbers me batayein (jaise: 1, 2, 3). Kitni plate/pcs chahiye?`;
-      }
-      session.quantity = qty;
-      session.step = 'waiting_for_address';
-      return `Theek hai, ${qty} quantity set ho gayi. Kripya apna home delivery address bhejein.`;
-    }
-
-    if (session.step === 'waiting_for_address') {
-      session.address = body;
-      const rawOrderId = Math.floor(100000 + Math.random() * 900000).toString();
-      const orderId = `RB-${rawOrderId}`;
-      const subtotal = session.price * session.quantity;
-      const gst = Math.round(subtotal * 0.05 * 100) / 100;
-      const deliveryCharge = subtotal >= 500 ? 0 : 40;
-      const total = subtotal + gst + deliveryCharge;
-      const currentDate = new Date().toISOString().split('T')[0];
-
-      const newOrder = {
-        id: orderId,
-        date: currentDate,
-        customerName: 'WhatsApp Guest',
-        customerPhone: fromNumber,
-        customerEmail: 'whatsapp@royalbites.in',
-        items: [{
-          name: session.dishName,
-          price: session.price,
-          quantity: session.quantity
-        }],
-        subtotal,
-        discount: 0,
-        coupon: 'None',
-        hasGift: false,
-        gst,
-        deliveryCharge,
-        total,
-        orderType: 'Delivery',
-        paymentMethod: 'COD',
-        specialInstructions: 'Ordered via WhatsApp AI Assistant',
-        estimatedTime: '30-40 mins',
-        status: 'Order Received',
-        paymentStatus: 'Pending'
-      };
-
-      session.finalOrder = newOrder;
-      return `✅ *Order Confirmed!*\n\n` +
-             `*Order ID:* ${rawOrderId}\n` +
-             `*Item:* ${session.dishName}\n` +
-             `*Qty:* ${session.quantity}\n` +
-             `*Total Amount:* ₹${total.toFixed(2)} (Cash/UPI on delivery)\n` +
-             `*Est. Time:* 30-40 mins\n\n` +
-             `Hum aapka order jaldi hi deliver kar denge! Thank you! 🍽️`;
-    }
-  }
-
-  // 2. Strict order status tracking (Do not ask for Order ID unless user explicitly wants order tracking/status)
-  const isTrackingQuery = /track|status|kaha|kahan|check|detail/i.test(query) && /order/i.test(query);
-  const wantsTracking = isTrackingQuery || /^(track|status|tracking|order id|mera order kaha)$/i.test(query) || (query.includes('order') && (query.includes('status') || query.includes('track') || query.includes('kaha') || query.includes('kahan') || query.includes('check')));
-
-  if (wantsTracking) {
-    if (context.orders && context.orders.length > 0) {
-      const lastOrder = context.orders[0];
-      return `Aapka aakhri order status:\n\n` +
-             `*Order ID:* ${lastOrder.id}\n` +
-             `*Status:* ${lastOrder.status}\n` +
-             `*Total:* ₹${lastOrder.total}\n\n` +
-             `Aap isey yahan bhi track kar sakte hain: https://royal-bites-restro.onrender.com/track-order/${lastOrder.id}`;
-    } else {
-      return `Humein aapke number se koi recent order nahi mila. Apne order ko track karne ke liye kripya 6-digit Order ID bhejein.`;
-    }
-  }
-
-  // 3. Restaurant Address check (Timing/Address Priority first)
-  if (/address|location|kaha|kahan|map|direction|rasta|road|place|bhopal|located|pata/i.test(query)) {
-    return `📍 *Royal Bites Location:*\n` +
-           `VIP Road, Bhopal, Madhya Pradesh.\n\n` +
-           `Google Maps Direction Link: https://maps.google.com/?q=VIP+Road+Bhopal`;
-  }
-
-  // 4. Timings check
-  if (/timing|hour|time|open|close|kab|samay|khulta|band/i.test(query)) {
-    return `⏰ *Royal Bites Timings:*\n` +
-           `• Monday – Thursday: 12:00 PM – 11:00 PM\n` +
-           `• Friday – Sunday: 12:00 PM – 12:00 AM\n\n` +
-           `Kitchen closing hours se 30 mins pehle close ho jata hai.`;
-  }
-
-  // 5. Payment check
-  if (/payment|upi|cash|cod|card|pay|gp|phonepe|paytm|wallet/i.test(query)) {
-    return `💳 *Payment Options:*\n` +
-           `Hum Google Pay, PhonePe, Paytm, BHIM UPI, Credit/Debit Cards, aur Cash on Delivery (COD) accept karte hain! Haan, UPI chalega.`;
-  }
-
-  // 6. Delivery check
-  if (/delivery|deliver|ghar|home|charge/i.test(query)) {
-    return `🛵 *Home Delivery:*\n` +
-           `Haan ji, home delivery available hai! ₹500 se upar ke orders par free delivery hai. Isse kam ke orders par ₹40 delivery charge apply hota hai.`;
-  }
-
-  // 7. Table Booking
-  if (/table|booking|book|seat|reserve|reservation/i.test(query)) {
-    return `🍽️ *Table Booking:*\n` +
-           `Haan, Royal Bites me table booking available hai!\n` +
-           `Aap website par directly book kar sakte hain: https://royal-bites-restro.onrender.com/booking\n\n` +
-           `Ya fir mujhe apna *Naam, Date, Time, aur Guests ki sankhya* bataiye, main book kar dunga!`;
-  }
-
-  // 8. Recommendations / Specials / Best food queries
-  const isRecommendQuery = /best|recommend|suggest|accha|achha|special|popular|swad|tasty/i.test(query);
-  if (isRecommendQuery) {
-    if (/pizza|piza|pijja|pija/i.test(query)) {
-      return `🍕 *Best Pizza Recommendation:*\n` +
-             `Humara *Veg Supreme Pizza* (₹299) sabse popular aur delicious hai! Classic cheese chahte hain toh *Margherita Pizza* (₹249) try karein.`;
-    }
-    if (/burger|burgur|burgar/i.test(query)) {
-      return `🍔 *Best Burger Recommendation:*\n` +
-             `*Royal Double Cheese Burger* (₹179) double cheese patty ke sath custom favorites me se ek hai!`;
-    }
-    if (/paneer|panir/i.test(query)) {
-      return `🧀 *Paneer Special:*\n` +
-             `Aap humara creamy *Paneer Butter Masala* (₹249) try karein, ye humara customer choice signature dish hai!`;
-    }
-    if (/lassi|drink|bev|chai|tea/i.test(query)) {
-      return `🥤 *Drinks Specials:*\n` +
-             `Refreshing *Mango Lassi* (₹119) ya clay-pot style *Sweet Lassi* (₹99) best selling drinks hain!`;
-    }
-    if (/sweet|dessert|mithai|halwa|rasmalai/i.test(query)) {
-      return `🍰 *Desserts Recommendations:*\n` +
-             `Aap saffron-milk flavored *Rasmalai* (₹119) ya ghee-rich *Moong Dal Halwa* (₹149) try karein, ekdum lajawab taste hai!`;
-    }
-    return `🍽️ *Royal Bites Recommendations:*\n` +
-           `• *Starters:* Paneer Tikka (₹229) & Hara Bhara Kebab (₹199)\n` +
-           `• *Main Course:* Paneer Butter Masala (₹249) & Dal Makhani (₹199)\n` +
-           `• *Pizza:* Veg Supreme Pizza (₹299)\n` +
-           `• *Dessert:* Rasmalai (₹119)`;
-  }
-
-  // 9. Food Order / Menu Item Lookup (Only runs if timing, address, etc. didn't match!)
-  const matchedItem = findMenuItem(query, context.menu);
-  const isOrderingQuery = /order|chahiye|chahye|buy|mangwana|mangao|bhejo|lele/i.test(query);
-
-  if (isOrderingQuery) {
-    if (matchedItem) {
-      const newSession = {
-        step: 'waiting_for_quantity',
-        dishName: matchedItem.name,
-        price: matchedItem.price
-      };
-      whatsappSessions.set(fromNumber, newSession);
-      return `Aapne *${matchedItem.name}* select kiya hai. Iski kitni quantity chahiye?`;
-    } else {
-      return `Aap kya order karna chahte hain? Humare menu me Pizza, Burger, Paneer Tikka, Biryani aur bahot kuch hai. Kripya dish ka naam likh kar order karein (e.g., *order pizza*).`;
-    }
-  }
-
-  // Dish price / details check (Lookup)
-  if (matchedItem) {
-    return `*${matchedItem.name}* ka price ₹${matchedItem.price} hai.\n` +
-           `*Description:* ${matchedItem.description || 'No description available'}.\n\n` +
-           `Isey order karne ke liye likhein: "order ${matchedItem.name.toLowerCase()}"`;
-  }
-
-  // 10. Offers check
-  if (/offer|coupon|discount|code|sasta|choot|sale|coupons|offers/i.test(query)) {
-    let reply = `🎁 *Royal Bites Active Offers* 🎁\n\n`;
-    if (context.coupons && context.coupons.length > 0) {
-      context.coupons.forEach(c => {
-        reply += `• *${c.code}* - ${c.description || `${c.discountValue}% off`}\n`;
-      });
-    } else {
-      reply += `• *ROYAL20* - Get 20% off on first table booking.\n` +
-               `• *WELCOME100* - ₹100 flat discount on orders above ₹499.\n` +
-               `• *FREEGIFT* - Free dessert on orders above ₹999.\n`;
-    }
-    return reply;
-  }
-
-  // 11. Menu list inquiry
-  if (/menu|list|khana|dish|dishes|catalog|item/i.test(query)) {
-    const isVegQuery = query.includes('veg') && !query.includes('non');
-    const isNonVegQuery = query.includes('non');
-
-    let itemsToDisplay = context.menu;
-    if (isVegQuery) {
-      itemsToDisplay = context.menu.filter(i => i.isVeg !== false);
-    } else if (isNonVegQuery) {
-      itemsToDisplay = context.menu.filter(i => i.isVeg === false);
-    }
-
-    if (itemsToDisplay.length === 0) {
-      return `Sorry, humare menu me abhi koi non-veg item nahi hai.`;
-    }
-
-    const menuByCategory = {};
-    itemsToDisplay.forEach(item => {
-      const cat = item.category || 'Other';
-      if (!menuByCategory[cat]) menuByCategory[cat] = [];
-      menuByCategory[cat].push(item);
-    });
-
-    let reply = `🍽️ *Royal Bites ${isVegQuery ? 'Veg ' : isNonVegQuery ? 'Non-Veg ' : ''}Menu*\n\n`;
-    for (const [cat, items] of Object.entries(menuByCategory)) {
-      reply += `*${cat}:*\n`;
-      items.forEach(i => {
-        reply += `• ${i.name} - ₹${i.price}\n`;
-      });
-      reply += `\n`;
-    }
-    reply += `Type dish name for price/details, or say "order [dish name]" to place an order.`;
-    return reply;
-  }
-
-  return null; // No rule matched
-};
-
-// Default welcome fallback if Grok fails and no rule matched
-const getDefaultFallbackReply = (body) => {
-  const query = body.toLowerCase().trim();
-  const isHindi = /namaste|helo|hi|kya|batao/i.test(query);
-  if (isHindi) {
-    return `Namaste! 🙏 Royal Bites AI Assistant me aapka swagat hai. Main aapki kya sahayata kar sakta hoon?\n\nAap mujhse pooch sakte hain:\n` +
-           `• *Menu dikhao* (Menu dekhne ke liye)\n` +
-           `• *Offers kya hai* (Offers ke liye)\n` +
-           `• *Table booking karni hai* (Booking ke liye)\n` +
-           `• *Mera order status kya hai* (Order status ke liye)\n` +
-           `• *Address kya hai* (Location ke liye)`;
-  } else {
-    return `Welcome to Royal Bites AI Assistant! 🙏 How can I assist you today?\n\nYou can ask me about:\n` +
-           `• *Menu* (To view our menu)\n` +
-           `• *Offers* (To view current coupons)\n` +
-           `• *Book table* (To book a table)\n` +
-           `• *Order status* (To track your latest order)\n` +
-           `• *Address & Timings*`;
-  }
-};
+// Removed duplicate helper functions
 
 const handleIncomingMessage = async (req, res) => {
+  const From = req.body.From;
+  const To = req.body.To;
+  const Body = req.body.Body;
+
   let reply = '';
-  let detectedIntent = 'General inquiry / No rule matched';
-  const { From, To, Body } = req.body;
+  let detectedIntent = 'fallback';
+  let matchedItemName = 'None';
 
   try {
-    if (!From || !Body) {
-      console.error('[DEBUG Error] Webhook received missing parameters. Body:', req.body);
-      const twiml = `<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-  <Message><![CDATA[Error: Missing From or Body parameters.]]></Message>
-</Response>`;
+    if (!From || Body === undefined) {
+      console.error('[Error] Webhook received missing parameters. Body:', req.body);
+      const twiml = `<Response><Message><![CDATA[Error: Missing From or Body parameters.]]></Message></Response>`;
       return res.type('text/xml').status(400).send(twiml);
     }
 
-    console.log('[DEBUG] --- Incoming WhatsApp Webhook Request ---');
-    console.log(`[DEBUG] Sender Number (From): ${From}`);
-    console.log(`[DEBUG] Recipient Number (To): ${To}`);
-    console.log(`[DEBUG] Message Body: "${Body}"`);
+    const incomingText = Body || "";
+    const msg = incomingText.toLowerCase().trim();
 
     // 1. Log incoming message in DB (Non-blocking)
     try {
       WhatsAppMessage.create({
         from: From,
         to: To || 'whatsapp:+919691832020',
-        body: Body,
+        body: incomingText,
         direction: 'inbound'
-      }).catch(err => console.error('[DEBUG Error] Async DB logging failed for incoming message:', err.message));
+      }).catch(err => console.error('[Error] Async DB logging failed for incoming message:', err.message));
     } catch (dbErr) {
-      console.error('[DEBUG Error] Failed to log incoming message to DB:', dbErr.message);
+      console.error('[Error] Failed to log incoming message to DB:', dbErr.message);
     }
 
     // 2. Extract last 10 digits of phone number to query MongoDB context
@@ -513,14 +261,14 @@ const handleIncomingMessage = async (req, res) => {
         menuItems = dbMenuItems;
       }
     } catch (dbErr) {
-      console.warn('[DEBUG Warning] Failed to query MenuItem collection. Using local fallback menu. Error:', dbErr.message);
+      console.warn('[Warning] Failed to query MenuItem collection. Using local fallback menu. Error:', dbErr.message);
     }
 
     let coupons = [];
     try {
       coupons = await Coupon.find({ active: true }).maxTimeMS(2000);
     } catch (dbErr) {
-      console.warn('[DEBUG Warning] Failed to query Coupon collection. Error:', dbErr.message);
+      console.warn('[Warning] Failed to query Coupon collection. Error:', dbErr.message);
     }
 
     let orders = [];
@@ -529,152 +277,245 @@ const handleIncomingMessage = async (req, res) => {
         customerPhone: { $regex: last10Digits }
       }).sort({ createdAt: -1 }).limit(5).maxTimeMS(2000);
     } catch (dbErr) {
-      console.warn('[DEBUG Warning] Failed to query Order collection. Error:', dbErr.message);
+      console.warn('[Warning] Failed to query Order collection. Error:', dbErr.message);
     }
 
-    let bookings = [];
-    try {
-      bookings = await Booking.find({
-        phone: { $regex: last10Digits }
-      }).sort({ createdAt: -1 }).limit(5).maxTimeMS(2000);
-    } catch (dbErr) {
-      console.warn('[DEBUG Warning] Failed to query Booking collection. Error:', dbErr.message);
+    const matchedItem = findMenuItem(msg, menuItems);
+    if (matchedItem) {
+      matchedItemName = matchedItem.name;
     }
 
-    const context = {
-      menu: menuItems,
-      coupons: coupons,
-      orders: orders,
-      bookings: bookings,
-      customerPhone: From
-    };
-
-    // 4. Find matched item and determine intent and rule-based reply
-    const matchedItem = findMenuItem(Body, context.menu);
-    let ruleBasedReply = getRuleBasedFallbackReply(Body, context, From);
-    
-    // Check if session exists to trace intent
+    // Strict priority checks:
     const session = whatsappSessions.get(From);
 
     if (session) {
-      if (session.step === 'waiting_for_quantity') {
-        detectedIntent = 'Order Flow - Waiting for Quantity';
-      } else if (session.step === 'waiting_for_address') {
-        detectedIntent = 'Order Flow - Waiting for Address';
-      }
-    }
-
-    if (ruleBasedReply && !session) {
-      const qLower = Body.toLowerCase();
-      if (/track|status|kaha|kahan|check|id/i.test(qLower) && /order/i.test(qLower)) detectedIntent = 'Order Status Tracking';
-      else if (/address|location|kaha|kahan|map|direction|rasta|road|place|bhopal|located/i.test(qLower)) detectedIntent = 'Restaurant Address';
-      else if (/timing|hour|time|open|close|kab|samay|khulta|band/i.test(qLower)) detectedIntent = 'Timing / Hours';
-      else if (/payment|upi|cash|cod|card|pay/i.test(qLower)) detectedIntent = 'Payment Options';
-      else if (/delivery|deliver|ghar|home|charge/i.test(qLower)) detectedIntent = 'Delivery';
-      else if (/table|booking|book|seat|reserve|reservation/i.test(qLower)) detectedIntent = 'Table Booking';
-      else if (/best|recommend|suggest|accha|achha|special|popular/i.test(qLower)) detectedIntent = 'Recommendations';
-      else if (/order|chahiye|chahye|buy|mangwana|mangao|bhejo|lele/i.test(qLower)) detectedIntent = 'Order Food Flow';
-      else if (matchedItem) detectedIntent = 'Price / Details';
-      else if (/offer|coupon|discount|code|sasta|choot|sale|coupons|offers/i.test(qLower)) detectedIntent = 'Offers & Coupons';
-      else if (/menu|list|khana|dish|dishes|catalog|item/i.test(qLower)) detectedIntent = 'Menu';
-    }
-
-    // Save order in MongoDB if finalOrder is attached to session (Order Flow Completed)
-    if (session && session.finalOrder) {
-      try {
-        await Order.create(session.finalOrder);
-        console.log(`[DEBUG] WhatsApp order saved in MongoDB: ${session.finalOrder.id}`);
+      if (/cancel|abort|stop|hatao|band/i.test(msg)) {
         whatsappSessions.delete(From);
-        detectedIntent = 'Order Flow - Confirmed & Saved';
-      } catch (dbErr) {
-        console.error('[DEBUG Error] Failed to save WhatsApp order in MongoDB:', dbErr.message);
+        reply = `Aapka order cancel kar diya hai. Kuch aur order karna chahein toh bataiye!`;
+        detectedIntent = 'cancel_order';
+      } else if (session.step === 'waiting_for_quantity') {
+        const qty = parseInt(msg.replace(/\D/g, ''), 10);
+        if (isNaN(qty) || qty <= 0) {
+          reply = `Kripya quantity numbers me batayein (jaise: 1, 2, 3). Kitni plate/pcs chahiye?`;
+        } else {
+          session.quantity = qty;
+          session.step = 'waiting_for_address';
+          reply = `Theek hai, ${qty} quantity set ho gayi. Kripya apna home delivery address bhejein.`;
+        }
+        detectedIntent = 'order_quantity';
+      } else if (session.step === 'waiting_for_address') {
+        session.address = incomingText; // Keep original casing
+        
+        const orderId = `RB-${Math.floor(100000 + Math.random() * 900000)}`;
+        const subtotal = session.price * session.quantity;
+        const gst = Math.round(subtotal * 0.05 * 100) / 100;
+        const deliveryCharge = subtotal >= 500 ? 0 : 40;
+        const total = subtotal + gst + deliveryCharge;
+        
+        // Save order to MongoDB
+        try {
+          await Order.create({
+            id: orderId,
+            date: new Date().toISOString().split('T')[0],
+            customerName: 'WhatsApp Guest',
+            customerPhone: From,
+            customerEmail: 'whatsapp@royalbites.in',
+            address: session.address,
+            items: [{
+              name: session.dishName,
+              price: session.price,
+              quantity: session.quantity
+            }],
+            subtotal,
+            discount: 0,
+            coupon: 'None',
+            hasGift: false,
+            gst,
+            deliveryCharge,
+            total,
+            orderType: 'Delivery',
+            paymentMethod: 'COD',
+            specialInstructions: 'Ordered via WhatsApp AI Assistant',
+            estimatedTime: '30-40 mins',
+            status: 'Order Received',
+            paymentStatus: 'Pending'
+          });
+          
+          reply = `✅ *Order Confirmed!*\n\n` +
+                  `*Order ID:* ${orderId}\n` +
+                  `*Item:* ${session.dishName}\n` +
+                  `*Qty:* ${session.quantity}\n` +
+                  `*Total Amount:* ₹${total.toFixed(2)} (Cash/UPI on delivery)\n` +
+                  `*Est. Time:* 30-40 mins\n\n` +
+                  `Hum aapka order jaldi hi deliver kar denge! Thank you! 🍽️`;
+          
+          whatsappSessions.delete(From);
+          detectedIntent = 'order_confirmed';
+        } catch (err) {
+          console.error('Error saving order from WhatsApp webhook:', err);
+          reply = `Order save karne me koi issue aaya. Kripya fir se try karein.`;
+          whatsappSessions.delete(From);
+          detectedIntent = 'order_failed';
+        }
       }
     }
-
-    let grokResponse = 'N/A';
-    let fallbackReason = 'None';
-
-    if (ruleBasedReply) {
-      // Rule-based matched. Try to use Grok only for natural language formatting.
-      try {
-        console.log(`[DEBUG] Rule-based reply found. Requesting Grok natural language formatting...`);
-        grokResponse = await formatGrokReply(Body, ruleBasedReply);
-        reply = grokResponse;
-      } catch (grokError) {
-        fallbackReason = `Grok formatting failed: ${grokError.message || grokError}. Reverting to raw structured response.`;
-        console.warn(`[DEBUG Warning] ${fallbackReason}`);
-        reply = ruleBasedReply;
+    // a) greetings: hi, hello, hey, namaste
+    else if (/\b(hi|hello|hey|namaste)\b/i.test(msg)) {
+      reply = `Hello! Welcome to Royal Bites. 🙏 How can I assist you today? You can ask for menu, address, timing, delivery, or check order status.`;
+      detectedIntent = 'greetings';
+    }
+    // b) address/location
+    else if (/\b(address|location|located|kaha|kahan|pata|map|direction|road|place)\b/i.test(msg)) {
+      reply = `📍 Royal Bites ka address: VIP Road, Bhopal.`;
+      detectedIntent = 'address';
+    }
+    // c) timing/open/close
+    else if (/\b(timing|open|close|time|hour|hours|kab|samay|khulta|band)\b/i.test(msg)) {
+      reply = `⏰ Royal Bites Timings:\n• Monday – Thursday: 12:00 PM – 11:00 PM\n• Friday – Sunday: 12:00 PM – 12:00 AM`;
+      detectedIntent = 'timing';
+    }
+    // d) payment/upi/cash/card
+    else if (/\b(payment|upi|cash|cod|card|pay|gp|phonepe|paytm)\b/i.test(msg)) {
+      reply = `💳 Payment Options:\nWe accept Google Pay, PhonePe, Paytm, BHIM UPI, Credit/Debit Cards, and Cash on Delivery (COD).`;
+      detectedIntent = 'payment';
+    }
+    // e) delivery
+    else if (/\b(delivery|deliver|ghar|home|charge)\b/i.test(msg)) {
+      reply = `🛵 Home Delivery:\nWe provide home delivery. Free delivery on orders above ₹500, else ₹40 delivery charge applies.`;
+      detectedIntent = 'delivery';
+    }
+    // f) booking/table
+    else if (/\b(table|booking|book|seat|reserve|reservation)\b/i.test(msg)) {
+      reply = `🍽️ Table Booking:\nYou can book a table online at: https://royal-bites-restro.onrender.com/booking or share your Name, Date, Time, and Guests here.`;
+      detectedIntent = 'booking';
+    }
+    // g) track/status/order id
+    else if (/\b(track|status|detail|check|order\s*id|orderid)\b/i.test(msg) || /\b\d{5,6}\b/.test(msg) || /rb-\d{5,6}/i.test(msg)) {
+      const orderIdMatch = msg.match(/\b\d{5,6}\b/) || msg.match(/rb-\d{5,6}/i);
+      let orderId = orderIdMatch ? orderIdMatch[0] : null;
+      if (orderId && !orderId.startsWith('RB-')) {
+        orderId = `RB-${orderId}`;
       }
-    } else {
-      // General question. Ask Grok normally.
-      try {
-        console.log(`[DEBUG] Querying Grok xAI API normally for: "${Body}"...`);
-        grokResponse = await getGrokReply(Body, context);
-        reply = grokResponse;
-      } catch (grokError) {
-        fallbackReason = `Grok normal chat failed: ${grokError.message || grokError}. Using default welcome menu.`;
-        console.warn(`[DEBUG Warning] ${fallbackReason}`);
-        reply = getDefaultFallbackReply(Body);
+
+      if (orderId) {
+        try {
+          const order = await Order.findOne({ id: { $regex: new RegExp(orderId, 'i') } });
+          if (order) {
+            reply = `📋 Order Status for ${order.id}:\nStatus: ${order.status}\nTotal: ₹${order.total}\nEstimated Time: ${order.estimatedTime}`;
+          } else {
+            reply = `Humein order ID ${orderId} nahi mila. Kripya sahi order ID batayein.`;
+          }
+        } catch (err) {
+          reply = `Order check karne me error aayi. Kripya thodi der baad try karein.`;
+        }
+      } else {
+        if (orders && orders.length > 0) {
+          const lastOrder = orders[0];
+          reply = `📋 Aapka aakhri order status:\nOrder ID: ${lastOrder.id}\nStatus: ${lastOrder.status}\nTotal: ₹${lastOrder.total}\nTrack Link: https://royal-bites-restro.onrender.com/track-order/${lastOrder.id}`;
+        } else {
+          reply = `Humein aapke number se koi recent order nahi mila. Apne order ko track karne ke liye kripya 6-digit Order ID bhejein (e.g. track 123456).`;
+        }
       }
+      detectedIntent = 'track_order';
+    }
+    // h) menu
+    else if (/\b(menu|list|khana|dish|dishes|catalog)\b/i.test(msg)) {
+      let menuReply = `🍽️ Royal Bites Menu:\n\n`;
+      const menuByCategory = {};
+      menuItems.forEach(item => {
+        const cat = item.category || 'Other';
+        if (!menuByCategory[cat]) menuByCategory[cat] = [];
+        menuByCategory[cat].push(item);
+      });
+      for (const [cat, items] of Object.entries(menuByCategory)) {
+        menuReply += `*${cat}:*\n`;
+        items.forEach(i => {
+          menuReply += `• ${i.name} - ₹${i.price}\n`;
+        });
+        menuReply += `\n`;
+      }
+      menuReply += `Type dish name for price/details, or say "order [dish name]" to place an order.`;
+      reply = menuReply;
+      detectedIntent = 'menu';
+    }
+    // j) new order (priority over details only if order keywords are present)
+    else if (/\b(order|chahiye|chahye|buy|mangwana|mangao|bhejo|lele)\b/i.test(msg)) {
+      if (matchedItem) {
+        const newSession = {
+          step: 'waiting_for_quantity',
+          dishName: matchedItem.name,
+          price: matchedItem.price
+        };
+        whatsappSessions.set(From, newSession);
+        reply = `Aapne *${matchedItem.name}* select kiya hai. Iski kitni quantity chahiye?`;
+      } else {
+        reply = `Aap kya order karna chahte hain? Humare menu me Pizza, Burger, Paneer Tikka, Biryani aur bahot kuch hai. Kripya dish ka naam likh kar order karein (e.g., *order pizza*).`;
+      }
+      detectedIntent = 'new_order';
+    }
+    // i) menu item price/details (no order keywords)
+    else if (matchedItem) {
+      reply = `*${matchedItem.name}* ka price ₹${matchedItem.price} hai.\nDescription: ${matchedItem.description || 'No description available'}.\n\nIsey order karne ke liye likhein: "order ${matchedItem.name.toLowerCase()}"`;
+      detectedIntent = 'price_details';
+    }
+    // k) fallback
+    else {
+      reply = `Welcome to Royal Bites! 🙏 How can I assist you today?\n\nYou can ask me about:\n` +
+             `• *Menu* (To view our menu)\n` +
+             `• *Offers* (To view current coupons)\n` +
+             `• *Book table* (To book a table)\n` +
+             `• *Order status* (To track your latest order)\n` +
+             `• *Address & Timings*`;
+      detectedIntent = 'fallback';
     }
 
-    // Print all detailed logs as requested by the user
-    console.log('------------------------------------------');
-    console.log(`[DEBUG LOG] Incoming message from: "${From}"`);
-    console.log(`[DEBUG LOG] Message body: "${Body}"`);
-    console.log(`[DEBUG LOG] Detected intent: "${detectedIntent}"`);
-    console.log(`[DEBUG LOG] Selected menu data count: ${context.menu.length}`);
-    console.log(`[DEBUG LOG] Grok API response: "${grokResponse}"`);
-    console.log(`[DEBUG LOG] Fallback reason: "${fallbackReason}"`);
-    console.log(`[DEBUG LOG] Final reply sent: "${reply}"`);
-    console.log('------------------------------------------');
+    console.log('Incoming:', incomingText);
+    console.log('From:', From);
+    console.log('Detected intent:', detectedIntent);
+    console.log('Matched item:', matchedItemName);
+    console.log('Reply:', reply);
 
-    // Send the TwiML response synchronously to Twilio (Content-Type: text/xml)
-    const twiml = `<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-  <Message><![CDATA[${reply}]]></Message>
-</Response>`;
-    res.type('text/xml').send(twiml);
+    // Send TwiML response synchronously
+    res.type('text/xml').send(`<Response><Message><![CDATA[${reply}]]></Message></Response>`);
 
-    // 5. Send backup copy via Twilio REST API asynchronously if API keys are valid (optional)
+    // Send backup copy via Twilio REST API asynchronously if API keys are valid (optional)
     if (process.env.TWILIO_ACCOUNT_SID && !process.env.TWILIO_ACCOUNT_SID.startsWith('ACXXXX')) {
       try {
         await sendWhatsAppMessage(From, reply);
       } catch (twilioErr) {
-        console.warn('[DEBUG Warning] Optional async REST API fallback send failed (likely placeholder credentials).');
+        console.warn('[Warning] Optional async REST API fallback send failed (likely placeholder credentials).');
       }
     }
 
-    // 6. Log outgoing message in DB (Non-blocking)
+    // Log outgoing message in DB (Non-blocking)
     try {
       WhatsAppMessage.create({
         from: To || 'whatsapp:+919691832020',
         to: From,
         body: reply,
         direction: 'outbound'
-      }).catch(err => console.error('[DEBUG Error] Async DB logging failed for outgoing message:', err.message));
+      }).catch(err => console.error('[Error] Async DB logging failed for outgoing message:', err.message));
     } catch (dbErr) {
-      console.error('[DEBUG Error] Failed to log outgoing message to DB:', dbErr.message);
+      console.error('[Error] Failed to log outgoing message to DB:', dbErr.message);
     }
 
   } catch (err) {
-    console.error('[DEBUG Error] Exception caught in webhook processing:', err.message || err);
+    console.error('[Error] Exception caught in webhook processing:', err.message || err);
     
     // Return safe fallback message in TwiML format to prevent Twilio webhook timeout
-    const fallbackText = getDefaultFallbackReply(Body);
-    const twiml = `<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-  <Message><![CDATA[${fallbackText}]]></Message>
-</Response>`;
+    const fallbackText = `Welcome to Royal Bites! 🙏 How can I assist you today?\n\nYou can ask me about:\n• *Menu* (To view our menu)\n• *Offers* (To view current coupons)\n• *Book table* (To book a table)\n• *Order status* (To track your latest order)\n• *Address & Timings*`;
+    const twiml = `<Response><Message><![CDATA[${fallbackText}]]></Message></Response>`;
     try {
       if (!res.headersSent) {
         res.type('text/xml').send(twiml);
       }
     } catch (sendErr) {
-      console.error('[DEBUG Error] Failed to send fallback TwiML reply after main exception:', sendErr.message);
+      console.error('[Error] Failed to send fallback TwiML reply after main exception:', sendErr.message);
     }
   }
 };
+
+const getRuleBasedFallbackReply = () => null;
 
 module.exports = {
   handleIncomingMessage,
