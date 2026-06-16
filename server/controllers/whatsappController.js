@@ -9,6 +9,9 @@ const { sendWhatsAppMessage } = require('../services/twilioWhatsAppService');
 // In-memory session store for WhatsApp orders
 const whatsappSessions = new Map();
 
+// In-memory cache for deduplicating incoming Twilio messages by MessageSid (5 minutes expiry)
+const messageSidCache = new Map();
+
 // Static menu fallback if MongoDB MenuItem collection is empty
 const fallbackMenu = [
   { name: 'Paneer Butter Masala', category: 'North Indian', price: 249, description: 'Creamy tomato gravy with soft paneer cubes', isVeg: true, rating: 4.9, popular: true },
@@ -222,6 +225,19 @@ const handleIncomingMessage = async (req, res) => {
   const From = req.body.From;
   const To = req.body.To;
   const Body = req.body.Body;
+  const MessageSid = req.body.MessageSid || req.body.SmsSid || "";
+
+  // Deduplicate requests using MessageSid
+  if (MessageSid) {
+    if (messageSidCache.has(MessageSid)) {
+      console.log(`[Deduplication] Duplicate MessageSid received: ${MessageSid}. Ignoring.`);
+      return res.type('text/xml').send('<Response></Response>');
+    }
+    messageSidCache.set(MessageSid, Date.now());
+    setTimeout(() => {
+      messageSidCache.delete(MessageSid);
+    }, 5 * 60 * 1000);
+  }
 
   let reply = '';
   let detectedIntent = 'fallback';
@@ -469,23 +485,13 @@ const handleIncomingMessage = async (req, res) => {
       detectedIntent = 'fallback';
     }
 
-    console.log('Incoming:', incomingText);
+    console.log('MessageSid:', MessageSid);
     console.log('From:', From);
-    console.log('Detected intent:', detectedIntent);
-    console.log('Matched item:', matchedItemName);
-    console.log('Reply:', reply);
+    console.log('Reply sent:', reply);
 
     // Send TwiML response synchronously
     res.type('text/xml').send(`<Response><Message><![CDATA[${reply}]]></Message></Response>`);
 
-    // Send backup copy via Twilio REST API asynchronously if API keys are valid (optional)
-    if (process.env.TWILIO_ACCOUNT_SID && !process.env.TWILIO_ACCOUNT_SID.startsWith('ACXXXX')) {
-      try {
-        await sendWhatsAppMessage(From, reply);
-      } catch (twilioErr) {
-        console.warn('[Warning] Optional async REST API fallback send failed (likely placeholder credentials).');
-      }
-    }
 
     // Log outgoing message in DB (Non-blocking)
     try {

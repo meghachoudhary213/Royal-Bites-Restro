@@ -4,18 +4,20 @@ const { handleIncomingMessage } = require('./controllers/whatsappController');
 
 // Helper to extract reply from TwiML XML Response
 const extractReply = (twiml) => {
+  if (twiml === '<Response></Response>') return '(Empty Response / Ignored)';
   const match = twiml.match(/<!\[CDATA\[([\s\S]*?)\]\]>/);
   return match ? match[1] : twiml;
 };
 
 // Mock request-response helper
-const sendTestMessage = async (fromPhone, messageText) => {
+const sendTestMessage = async (fromPhone, messageText, messageSid) => {
   return new Promise((resolve) => {
     const req = {
       body: {
         From: fromPhone,
         To: 'whatsapp:+14155238886',
-        Body: messageText
+        Body: messageText,
+        MessageSid: messageSid || `SM${Math.floor(100000 + Math.random() * 900000)}`
       }
     };
     const res = {
@@ -60,6 +62,19 @@ const runTests = async () => {
     
     console.log(`Reply:\n==================================\n${reply}\n==================================`);
   }
+
+  // Deduplication Verification
+  console.log('\nTest Case: [deduplication test - message 1]');
+  const testSid = 'SM999999';
+  console.log(`Input: "hi" (From: whatsapp:+919876543210, MessageSid: ${testSid})`);
+  const reply1 = await sendTestMessage('whatsapp:+919876543210', 'hi', testSid);
+  console.log(`Reply:\n==================================\n${reply1}\n==================================`);
+
+  console.log('\nTest Case: [deduplication test - message 2 (same MessageSid)]');
+  console.log(`Input: "hi" (From: whatsapp:+919876543210, MessageSid: ${testSid})`);
+  const reply2 = await sendTestMessage('whatsapp:+919876543210', 'hi', testSid);
+  console.log(`Reply:\n==================================\n${reply2}\n==================================`);
+
   console.log('\n--- TESTS COMPLETED ---');
 
   console.log('Disconnecting from database...');
