@@ -43,7 +43,7 @@ function getBotResponse(input) {
 
   if (msg.includes('order food') || msg.includes('how to order') || msg.includes('buy')) {
     return {
-      text: `🍔 **How to Order Food**\n\n1. Browse our **Signature Menu**.\n2. Tap the **+** icon to add items to your cart, or click cards for details.\n3. Open the **Cart** (bag icon on the top right).\n4. Click **Checkout on WhatsApp** to verify your address and complete the order!`,
+      text: `🍔 **How to Order Food**\n\n1. Browse our **Signature Menu**.\n2. Tap the **+** icon to add items to your cart, or click cards for details.\n3. Open the **Cart** (bag icon on the top right).\n4. Click **Proceed to Checkout** to verify your address, select a payment method, and complete the order!`,
       action: null,
     };
   }

@@ -1,6 +1,7 @@
 const Order = require('../models/Order');
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
+const { sendWhatsAppMessage } = require('../services/twilioWhatsAppService');
 
 let razorpay;
 try {
@@ -25,6 +26,12 @@ const createOrder = async (req, res) => {
     }
 
     const order = await Order.create(orderData);
+    
+    // Send WhatsApp confirmation notification asynchronously
+    sendOrderConfirmationNotification(order).catch(err => {
+      console.error('Error triggering WhatsApp confirmation notification:', err.message);
+    });
+
     res.status(201).json({ success: true, data: order });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
@@ -170,10 +177,68 @@ const verifyRazorpayPayment = async (req, res) => {
     }
 
     const order = await Order.create(newOrderData);
+    
+    // Send WhatsApp confirmation notification asynchronously
+    sendOrderConfirmationNotification(order).catch(err => {
+      console.error('Error triggering WhatsApp confirmation notification:', err.message);
+    });
+
     res.status(201).json({ success: true, data: order });
   } catch (error) {
     console.error('Razorpay Verification Error:', error.message);
     res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+const sendOrderConfirmationNotification = async (order) => {
+  try {
+    if (!order || !order.customerPhone) return;
+
+    let messageBody = `👑 *Royal Bites Order Confirmation* 👑\n\n`;
+    messageBody += `*Order ID:* ${order.id}\n`;
+    messageBody += `*Customer Name:* ${order.customerName}\n`;
+    messageBody += `*Phone:* ${order.customerPhone}\n`;
+    if (order.orderType === 'Delivery') {
+      messageBody += `*Address:* ${order.address || ''}\n`;
+      if (order.landmark && order.landmark.trim()) messageBody += `*Landmark:* ${order.landmark}\n`;
+      messageBody += `*City:* ${order.city || ''} - ${order.pincode || ''}\n`;
+    }
+    messageBody += `*Order Type:* ${order.orderType}\n`;
+    if (order.coupon && order.coupon !== 'None') {
+      messageBody += `*Coupon Code:* ${order.coupon}\n`;
+    }
+    messageBody += `\n*Items Ordered:*\n`;
+    
+    if (order.items && Array.isArray(order.items)) {
+      order.items.forEach((item) => {
+        messageBody += `• ${item.name} x${item.quantity} — ₹${item.price * item.quantity}\n`;
+      });
+    }
+
+    messageBody += `\n*Subtotal:* ₹${order.subtotal.toFixed(2)}`;
+    if (order.discount > 0) {
+      messageBody += `\n*Discount:* -₹${order.discount.toFixed(2)}`;
+    }
+    if (order.hasGift) {
+      messageBody += `\n*Free Gift:* Special Royal Dessert included!`;
+    }
+    messageBody += `\n*GST (5%):* ₹${order.gst.toFixed(2)}`;
+    if (order.orderType === 'Delivery') {
+      messageBody += `\n*Delivery Charges:* ${order.deliveryCharge === 0 ? 'FREE' : `₹${order.deliveryCharge.toFixed(2)}`}`;
+    }
+    messageBody += `\n*Total Amount:* ₹${order.total.toFixed(2)}\n`;
+    messageBody += `*Payment Method:* ${order.paymentMethod}\n`;
+    if (order.specialInstructions && order.specialInstructions !== 'None') {
+      messageBody += `*Special Instructions:* ${order.specialInstructions}\n`;
+    }
+    messageBody += `*Estimated Time:* ${order.estimatedTime}\n\n`;
+    messageBody += `Thank you for ordering with Royal Bites! Your order is being prepared.`;
+
+    console.log(`[Notification] Attempting to send WhatsApp confirmation to: ${order.customerPhone}`);
+    await sendWhatsAppMessage(order.customerPhone, messageBody);
+    console.log(`[Notification] WhatsApp confirmation sent successfully to ${order.customerPhone}`);
+  } catch (error) {
+    console.error(`[Notification Error] Failed to send order confirmation to ${order.customerPhone || 'unknown'}:`, error.message);
   }
 };
 

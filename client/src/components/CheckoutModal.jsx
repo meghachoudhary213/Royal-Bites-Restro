@@ -6,7 +6,6 @@ import {
 } from 'lucide-react';
 import { restaurantInfo } from '../data/menu';
 import { api } from '../api/api';
-import { getWhatsAppLink } from '../utils/whatsappLink';
 import { showSuccess, showError, showWarning, showInfo, showLoading, resolveLoading } from '../utils/toast';
 import { toast } from 'react-hot-toast';
 
@@ -261,6 +260,10 @@ export default function CheckoutModal({
       customerName: name,
       customerPhone: phone,
       customerEmail: email,
+      address: orderType === 'Delivery' ? address : '',
+      landmark: orderType === 'Delivery' ? landmark : '',
+      city: orderType === 'Delivery' ? city : '',
+      pincode: orderType === 'Delivery' ? pincode : '',
       items: cartItems.map(item => ({
         name: item.name,
         price: item.price,
@@ -328,47 +331,6 @@ export default function CheckoutModal({
     // Save globally to mock restaurant dashboard
     const allOrders = JSON.parse(localStorage.getItem('rb_all_orders') || '[]');
     localStorage.setItem('rb_all_orders', JSON.stringify([newOrder, ...allOrders]));
-
-    // Construct WhatsApp message receipt
-    let message = `👑 *Royal Bites Order Confirmation* 👑\n\n`;
-    message += `*Order ID:* ${orderId}\n`;
-    message += `*Customer Name:* ${name}\n`;
-    message += `*Phone:* ${phone}\n`;
-    if (orderType === 'Delivery') {
-      message += `*Address:* ${address}\n`;
-      if (landmark.trim()) message += `*Landmark:* ${landmark}\n`;
-      message += `*City:* ${city} - ${pincode}\n`;
-    }
-    message += `*Order Type:* ${orderType}\n`;
-    if (appliedCoupon) {
-      message += `*Coupon Code:* ${appliedCoupon.code} (${appliedCoupon.description || appliedCoupon.desc})\n`;
-    }
-    message += `\n*Items Ordered:*\n`;
-    
-    cartItems.forEach((item) => {
-      message += `• ${item.name} x${item.quantity} — ₹${item.price * item.quantity}\n`;
-    });
-
-    message += `\n*Subtotal:* ₹${subtotal.toFixed(2)}`;
-    if (discountAmount > 0) {
-      message += `\n*Discount (${appliedCoupon.code}):* -₹${discountAmount.toFixed(2)}`;
-    }
-    if (hasFreeGift) {
-      message += `\n*Free Gift:* Special Royal Dessert included!`;
-    }
-    message += `\n*GST (5%):* ₹${gst.toFixed(2)}`;
-    if (orderType === 'Delivery') {
-      message += `\n*Delivery Charges:* ${deliveryCharge === 0 ? 'FREE' : `₹${deliveryCharge.toFixed(2)}`}`;
-    }
-    message += `\n*Total Amount:* ₹${grandTotal.toFixed(2)}\n`;
-    message += `*Payment Method:* ${paymentMethod}\n`;
-    message += `*Special Instructions:* ${instructionsText}\n\n`;
-    message += `Please confirm my order and prepare the feast!`;
-
-    const url = getWhatsAppLink(message);
-    
-    // Redirect to WhatsApp
-    window.open(url, '_blank');
 
     // Show order confirmation screen
     setConfirmedOrder(newOrder);
@@ -573,7 +535,7 @@ export default function CheckoutModal({
             Order Confirmed!
           </h3>
           <p className="text-xs text-cream/60 mb-6">
-            Your order has been logged successfully and forwarded to WhatsApp for instant confirmation.
+            Your order has been logged successfully and is being prepared.
           </p>
 
           {/* Delivery estimate / order detail badge */}
@@ -1054,7 +1016,7 @@ export default function CheckoutModal({
               disabled={isSubmitting || cartItems.length === 0}
               className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl font-bold bg-gradient-to-r from-sunset to-gold text-navy hover:shadow-lg hover:shadow-sunset/20 transition-all cursor-pointer disabled:opacity-50"
             >
-              {isSubmitting ? 'Confirming...' : 'Place Order & WhatsApp'}
+              {isSubmitting ? 'Confirming...' : 'Place Order'}
             </button>
           </div>
         </form>
