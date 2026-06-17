@@ -5,8 +5,9 @@ import ReviewsSection from '../components/ReviewsSection';
 import Footer from '../components/Footer';
 import Chatbot from '../components/Chatbot';
 import WhatsAppButton, { openWhatsApp } from '../components/WhatsAppButton';
-import { Bed, Users, Sparkles, Waves, ShieldCheck, Heart } from 'lucide-react';
-import { roomsData } from '../data/hotel';
+import { Bed, Users } from 'lucide-react';
+import { roomsData, hotelOffers, galleryImages } from '../data/hotel';
+import { showSuccess } from '../utils/toast';
 
 export default function Home() {
   const navigate = useNavigate();
@@ -287,27 +288,71 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Luxury Services Section */}
-      <section className="py-20 bg-navy-light/10 border-t border-white/5 text-center">
+      {/* Exclusive Offers Preview */}
+      <section className="py-20 bg-navy-light/10 border-t border-[#C0C0C0]/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-2xl mx-auto mb-16">
-            <p className="text-sunset uppercase tracking-widest text-xs font-semibold mb-2">Resort Highlights</p>
-            <h2 className="font-display text-3xl sm:text-4xl font-bold text-cream">5-Star Luxury Privileges</h2>
+          <div className="flex justify-between items-end mb-12">
+            <div className="text-left">
+              <p className="text-sunset uppercase tracking-widest text-xs font-semibold mb-2">Special Promotions</p>
+              <h2 className="font-display text-3xl sm:text-4xl font-bold text-cream">Exclusive Resort Offers</h2>
+            </div>
+            <Link to="/offers" className="text-xs font-bold text-sunset hover:text-gold flex items-center gap-1 uppercase tracking-widest transition-colors">
+              All Offers &rarr;
+            </Link>
           </div>
-
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            {[
-              { icon: Waves, title: "Infinity Sky Pools", desc: "Soak in heated sky swimming pools overlooking the coastline cliffs." },
-              { icon: Sparkles, title: "24/7 Room Concierge", desc: "Always available to handle shuttle bookings, activities, and spa check-ins." },
-              { icon: ShieldCheck, title: "Private Butler Service", desc: "Available for Presidential Suite bookings to provide bespoke hosting." },
-              { icon: Heart, title: "Customized Dinings", desc: "Enjoy room deliveries and private candlelit dinners hosted by Royal Bites." }
-            ].map(({ icon: Icon, title, desc }) => (
-              <div key={title} className="glass p-6 rounded-3xl border border-white/10 space-y-4 hover:border-white/20 hover:-translate-y-1 transition-all duration-300 text-left">
-                <div className="w-12 h-12 bg-sunset/20 text-sunset rounded-2xl flex items-center justify-center">
-                  <Icon className="w-6 h-6" />
+          <div className="grid md:grid-cols-3 gap-8">
+            {hotelOffers.map((offer) => (
+              <div key={offer.code} className="glass rounded-3xl p-6 border border-[#C0C0C0]/20 flex flex-col justify-between text-left group hover:border-sunset/40 transition-all duration-300">
+                <div>
+                  <span className="px-3 py-1 bg-sunset/10 text-sunset text-[10px] font-bold rounded-lg uppercase tracking-wider mb-4 inline-block">{offer.discount}</span>
+                  <h3 className="font-display text-lg font-bold text-cream mb-2">{offer.title}</h3>
+                  <p className="text-cream/60 text-xs leading-relaxed mb-4 line-clamp-3">{offer.description}</p>
                 </div>
-                <h3 className="font-display text-lg font-bold text-cream">{title}</h3>
-                <p className="text-cream/50 text-xs sm:text-sm leading-relaxed">{desc}</p>
+                <div className="pt-4 border-t border-[#C0C0C0]/10 flex items-center justify-between">
+                  <span className="text-[10px] text-cream/40">{offer.validity}</span>
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(offer.code);
+                      showSuccess(`Promo code ${offer.code} copied!`);
+                    }}
+                    className="text-xs font-bold text-sunset hover:underline cursor-pointer"
+                  >
+                    Copy Code: {offer.code}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Gallery Preview */}
+      <section className="py-24 border-t border-[#C0C0C0]/20 relative overflow-hidden">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-end mb-12">
+            <div className="text-left">
+              <p className="text-sunset uppercase tracking-widest text-xs font-semibold mb-2">Vistas</p>
+              <h2 className="font-display text-3xl sm:text-4xl font-bold text-cream">A Visual Journey</h2>
+            </div>
+            <Link to="/gallery" className="text-xs font-bold text-sunset hover:text-gold flex items-center gap-1 uppercase tracking-widest transition-colors">
+              Full Gallery &rarr;
+            </Link>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {galleryImages.slice(0, 4).map((img, idx) => (
+              <div key={idx} className="relative h-64 rounded-3xl overflow-hidden glass p-1 group shadow-lg">
+                <div className="relative w-full h-full rounded-2xl overflow-hidden">
+                  <img 
+                    src={img.url} 
+                    alt={img.title} 
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-navy/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4 text-left pointer-events-none">
+                    <span className="text-[9px] text-sunset uppercase tracking-wider font-semibold">{img.category}</span>
+                    <h4 className="text-xs font-bold text-cream mt-0.5">{img.title}</h4>
+                  </div>
+                </div>
               </div>
             ))}
           </div>

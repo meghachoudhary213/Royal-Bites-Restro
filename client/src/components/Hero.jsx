@@ -6,7 +6,7 @@ const hotelSlides = [
   {
     id: 1,
     title: "Sanctuary of Pure Grandeur",
-    subtitle: "Experience 5-star oceanfront luxury where timeless heritage meets contemporary elegance.",
+    subtitle: "Experience 5-star hospitality where timeless architectural majesty meets contemporary elegance.",
     image: "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1600&q=80",
     tag: "Welcome to Royal Grand",
     rating: "5.0",
@@ -14,8 +14,8 @@ const hotelSlides = [
   },
   {
     id: 2,
-    title: "Lavish Suites & Ocean Villas",
-    subtitle: "Indulge in private heated infinity pools and personalized 24/7 butler services.",
+    title: "Presidential Infinity Suites",
+    subtitle: "Indulge in our masterfully crafted private spaces with 24/7 personalized butler services.",
     image: "https://images.unsplash.com/photo-1618773928121-c32242e63f39?auto=format&fit=crop&w=1600&q=80",
     tag: "Accommodations",
     rating: "4.9",
@@ -23,21 +23,30 @@ const hotelSlides = [
   },
   {
     id: 3,
-    title: "Gourmet Michelin-Style Dining",
-    subtitle: "Savor exquisite culinary art prepared by award-winning chefs at Royal Bites.",
-    image: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=1600&q=80",
+    title: "The Azure Horizon Infinity Pool",
+    subtitle: "Soak in panoramic ocean views and bask in luxury by our heated infinity pools.",
+    image: "https://images.unsplash.com/photo-1576013551627-0cc20b96c2a7?auto=format&fit=crop&w=1600&q=80",
+    tag: "Infinity Pool Sanctuary",
+    rating: "5.0",
+    link: "/rooms"
+  },
+  {
+    id: 4,
+    title: "Gourmet Rooftop Dining",
+    subtitle: "Savor exquisite Michelin-inspired culinary arts at Royal Bites Signature Restaurant.",
+    image: "https://images.unsplash.com/photo-1533777857889-4be7c70b33f7?auto=format&fit=crop&w=1600&q=80",
     tag: "Royal Bites Restaurant",
     rating: "4.9",
     link: "/menu"
   },
   {
-    id: 4,
-    title: "Tranquility & Rejuvenation",
-    subtitle: "Restore absolute harmony with traditional Ayurvedic rituals and stone therapies.",
+    id: 5,
+    title: "Majestic Resort Shorelines",
+    subtitle: "Experience an elite coastal getaway nestled in pristine clifftop tropical gardens.",
     image: "https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=1600&q=80",
-    tag: "Spa & Wellness Sanctuary",
+    tag: "Resort Exterior",
     rating: "5.0",
-    link: "/spa"
+    link: "/rooms"
   }
 ];
 

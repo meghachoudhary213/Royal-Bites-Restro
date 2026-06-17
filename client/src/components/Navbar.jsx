@@ -49,8 +49,8 @@ export default function Navbar({
             <div className="p-2 rounded-xl bg-gradient-to-br from-sunset to-gold group-hover:scale-110 transition-transform">
               <Crown className="w-5 h-5 text-cream" />
             </div>
-            <span className="font-display text-lg md:text-xl font-bold text-gradient">
-              Royal Grand
+            <span className="font-display text-sm sm:text-lg md:text-xl font-bold text-gradient">
+              Royal Grand Hotel & Resort
             </span>
           </Link>
 
