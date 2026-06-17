@@ -1,17 +1,17 @@
 @import "tailwindcss";
 
 @theme {
-  --color-navy: #F8F6F1;          /* Soft Ivory White page background */
-  --color-navy-light: #F1EDE4;    /* Light Ivory background for sections/panels */
-  --color-navy-dark: #E4DDD3;     /* Ivory Dark for contrast/dropdowns/footers */
-  --color-sunset: #1E3A8A;        /* Luxurious Royal Blue Accent */
-  --color-sunset-dark: #0F172A;   /* Deep Navy Accent */
-  --color-gold: #C0C0C0;          /* Silver Accent */
-  --color-gold-dark: #94A3B8;     /* Darker Silver/Steel Accent */
-  --color-pink: #F8F6F1;          /* Soft Ivory White */
-  --color-pink-soft: #E4DDD3;     /* Warm cream soft */
-  --color-cream: #0F172A;         /* Deep Navy (default body text) */
-  --color-cream-dark: #090D1A;    /* Even deeper Navy for bold headings */
+  --color-navy: #0B1F17;          /* Deep Dark Emerald page background */
+  --color-navy-light: #132A21;    /* Surface Cards / warm dark emerald */
+  --color-navy-dark: #07150E;     /* Deeper Dark Emerald for backdrops/footers/inputs */
+  --color-sunset: #C8A97E;        /* Luxurious Champagne Gold Accent */
+  --color-sunset-dark: #AB8D62;   /* Dark Champagne Gold Accent */
+  --color-gold: #D8C3A5;          /* Light Champagne Gold */
+  --color-gold-dark: #8B7355;     /* Champagne Bronze */
+  --color-pink: #0B1F17;          /* Deep Dark Emerald */
+  --color-pink-soft: #07150E;     /* Warm cream soft */
+  --color-cream: #F8F4EC;         /* Warm Ivory (default body text) */
+  --color-cream-dark: #FAF9F6;    /* Pure Ivory for bold headings */
   --font-display: "Playfair Display", Georgia, serif;
   --font-body: "Inter", system-ui, sans-serif;
 }
@@ -27,43 +27,43 @@
   }
 
   ::selection {
-    @apply bg-blue-900/20 text-[#0F172A];
+    @apply bg-[#C8A97E]/30 text-[#F8F4EC];
   }
 }
 
 @utility glass {
-  @apply bg-white/70 backdrop-blur-xl border border-[#C0C0C0]/20 shadow-xl;
+  @apply bg-[#132A21]/70 backdrop-blur-xl border border-[#C8A97E]/20 shadow-xl;
 }
 
 @utility glass-strong {
-  @apply bg-white/85 backdrop-blur-2xl border border-[#C0C0C0]/25 shadow-2xl;
+  @apply bg-[#132A21]/85 backdrop-blur-2xl border border-[#C8A97E]/25 shadow-2xl;
 }
 
 @utility glass-card {
-  @apply bg-gradient-to-br from-white/80 to-white/50 backdrop-blur-xl border border-[#C0C0C0]/20 rounded-2xl shadow-lg hover:shadow-xl hover:border-[#1E3A8A]/30 transition-all duration-300;
+  @apply bg-gradient-to-br from-[#132A21]/80 to-[#132A21]/40 backdrop-blur-xl border border-[#C8A97E]/15 rounded-2xl shadow-lg hover:shadow-xl hover:border-[#C8A97E]/30 transition-all duration-300;
 }
 
 @utility text-gradient {
-  @apply bg-gradient-to-r from-[#0F172A] via-[#1E3A8A] to-[#94A3B8] bg-clip-text text-transparent;
+  @apply bg-gradient-to-r from-[#F8F4EC] via-[#D8C3A5] to-[#C8A97E] bg-clip-text text-transparent;
 }
 
 @utility btn-primary {
   @apply inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full font-semibold
-    bg-gradient-to-r from-[#1E3A8A] to-[#0F172A] text-[#F8F6F1]
-    hover:from-[#C0C0C0] hover:to-[#94A3B8] hover:text-[#0F172A] transition-all duration-300
-    shadow-lg shadow-blue-950/20 hover:shadow-slate-900/30 hover:-translate-y-0.5;
+    bg-gradient-to-r from-[#C8A97E] to-[#AB8D62] text-[#07150E]
+    hover:from-[#F8F4EC] hover:to-[#D8C3A5] hover:text-[#07150E] transition-all duration-300
+    shadow-lg shadow-[#C8A97E]/20 hover:shadow-[#C8A97E]/40 hover:-translate-y-0.5;
 }
 
 @utility btn-secondary {
   @apply inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full font-semibold
-    bg-white/70 backdrop-blur-xl border border-[#1E3A8A]/20 text-[#1E3A8A]
-    hover:bg-[#F1EDE4] hover:border-[#1E3A8A]/40 transition-all duration-300 hover:-translate-y-0.5;
+    bg-white/5 backdrop-blur-xl border border-[#C8A97E]/30 text-[#F8F4EC]
+    hover:bg-white/10 hover:border-[#C8A97E]/55 transition-all duration-300 hover:-translate-y-0.5;
 }
 
 @utility input-field {
-  @apply w-full px-4 py-3 rounded-xl bg-white/70 border border-[#0F172A]/20 text-[#0F172A]
-    placeholder:text-[#0F172A]/50 focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/50
-    focus:border-[#1E3A8A]/50 transition-all;
+  @apply w-full px-4 py-3 rounded-xl bg-[#132A21]/70 border border-[#C8A97E]/20 text-[#F8F4EC]
+    placeholder:text-[#F8F4EC]/40 focus:outline-none focus:ring-2 focus:ring-[#C8A97E]/50
+    focus:border-[#C8A97E]/50 transition-all;
 }
 
 @utility section-title {
@@ -72,27 +72,27 @@
 }
 
 @utility text-navy {
-  color: #0F172A !important;
+  color: #07150E !important;
 }
 
 .hero-gradient {
   background: linear-gradient(
     160deg,
-    #F8F6F1 0%,
-    #F1EDE4 40%,
-    #E4DDD3 70%,
-    rgba(192, 192, 192, 0.15) 90%,
-    rgba(15, 23, 42, 0.05) 100%
+    #07150E 0%,
+    #0B1F17 30%,
+    #132A21 60%,
+    rgba(200, 169, 126, 0.15) 85%,
+    rgba(248, 244, 236, 0.05) 100%
   );
 }
 
 .sunset-gradient {
   background: linear-gradient(
     135deg,
-    #0F172A 0%,      /* Deep Navy */
-    #1E3A8A 40%,     /* Royal Blue */
-    #C0C0C0 75%,     /* Silver Accent */
-    #94A3B8 100%     /* Steel Accent */
+    #07150E 0%,      /* Deep Dark Emerald */
+    #132A21 35%,     /* Surface Emerald */
+    #C8A97E 75%,     /* Champagne Gold */
+    #FAF9F6 100%     /* Ivory */
   );
 }
 
