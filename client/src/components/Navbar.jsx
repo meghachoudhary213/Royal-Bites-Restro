@@ -4,8 +4,12 @@ import { Menu, X, Crown, ShoppingBag, User, LogOut, History, ChevronDown } from 
 
 const navLinks = [
   { href: '/', label: 'Home' },
-  { href: '/menu', label: 'Menu' },
-  { href: '/booking', label: 'Book Table' },
+  { href: '/rooms', label: 'Rooms' },
+  { href: '/menu', label: 'Royal Bites' },
+  { href: '/spa', label: 'Spa' },
+  { href: '/events', label: 'Events' },
+  { href: '/offers', label: 'Offers' },
+  { href: '/gallery', label: 'Gallery' },
   { href: '/contact', label: 'Contact' },
 ];
 
@@ -43,10 +47,10 @@ export default function Navbar({
         <div className="flex items-center justify-between h-14 md:h-16">
           <Link to="/" className="flex items-center gap-2 group">
             <div className="p-2 rounded-xl bg-gradient-to-br from-sunset to-gold group-hover:scale-110 transition-transform">
-              <Crown className="w-5 h-5 text-navy" />
+              <Crown className="w-5 h-5 text-cream" />
             </div>
-            <span className="font-display text-xl md:text-2xl font-bold text-gradient">
-              Royal Bites
+            <span className="font-display text-lg md:text-xl font-bold text-gradient">
+              Royal Grand
             </span>
           </Link>
 
@@ -62,7 +66,6 @@ export default function Navbar({
               </Link>
             ))}
             
-
 
             {/* Desktop Auth Section */}
             {currentUser ? (
@@ -85,11 +88,11 @@ export default function Navbar({
                     Profile
                   </Link>
                   <Link
-                    to="/dashboard?tab=orders"
+                    to="/dashboard?tab=bookings"
                     className="w-full text-left px-4 py-2 text-sm text-cream/80 hover:bg-white/10 hover:text-gold transition-colors flex items-center gap-2 cursor-pointer"
                   >
                     <History className="w-4.5 h-4.5 text-sunset" />
-                    My Orders
+                    My Bookings
                   </Link>
                   <div className="border-t border-white/5 my-1" />
                   <button
@@ -125,6 +128,14 @@ export default function Navbar({
                 </span>
               )}
             </button>
+
+            {/* Book Now Button */}
+            <Link
+              to="/booking"
+              className="px-4 py-2 rounded-xl bg-gradient-to-r from-sunset to-sunset-dark text-cream hover:opacity-90 font-bold text-xs transition-all duration-300 shadow-md shadow-sunset/25 hover:shadow-sunset/40 hover:-translate-y-0.5"
+            >
+              Book Now
+            </Link>
           </div>
 
           <div className="flex items-center gap-3 lg:hidden">
@@ -183,12 +194,12 @@ export default function Navbar({
                   Profile Details
                 </Link>
                 <Link
-                  to="/dashboard?tab=orders"
+                  to="/dashboard?tab=bookings"
                   onClick={() => setMobileOpen(false)}
                   className="w-full text-left block py-2 text-cream/90 hover:text-gold transition-colors flex items-center gap-2 cursor-pointer"
                 >
                   <History className="w-4 h-4 text-sunset" />
-                  My Orders
+                  My Bookings
                 </Link>
                 <button
                   onClick={() => {
@@ -213,6 +224,15 @@ export default function Navbar({
                 Login / Register
               </button>
             )}
+
+            {/* Mobile Book Now CTA */}
+            <Link
+              to="/booking"
+              onClick={() => setMobileOpen(false)}
+              className="block w-full text-center py-2.5 rounded-xl bg-gradient-to-r from-sunset to-sunset-dark text-cream font-bold text-xs mt-3 shadow-lg"
+            >
+              Book Now
+            </Link>
           </div>
         )}
       </div>

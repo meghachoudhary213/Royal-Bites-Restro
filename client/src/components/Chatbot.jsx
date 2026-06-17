@@ -4,12 +4,12 @@ import { formatMenuForChat, restaurantInfo } from '../data/menu';
 import { useNavigate } from 'react-router-dom';
 
 const QUICK_ACTIONS = [
+  'Resort Rooms',
+  'Spa & Wellness',
+  'Banquets & Events',
   'Show menu',
+  'Book table / room',
   'View offers',
-  'Book table',
-  'Restaurant timing',
-  'Order status',
-  'Contact on WhatsApp',
 ];
 
 function getBotResponse(input) {
@@ -17,15 +17,36 @@ function getBotResponse(input) {
 
   if (msg.includes('login') || msg.includes('sign in')) {
     return {
-      text: `🔐 **How to Login**\n\nClick the **Login** button at the top right of the page. Enter your email/mobile and password, or use the **Sign in with Google (Demo)** shortcut to log in instantly.`,
+      text: `🔐 **How to Login**\n\nClick the **Login** button at the top right of the page. Enter your credentials or use the Google Sign-in demo shortcut to log in instantly.`,
       action: null,
     };
   }
 
   if (msg.includes('register') || msg.includes('sign up') || msg.includes('create account')) {
     return {
-      text: `📝 **How to Register**\n\nClick the **Login** button at the top right of the page, then select **Create Account** at the bottom. Provide your name, mobile, email, password, and address to register.`,
+      text: `📝 **How to Register**\n\nClick the **Login** button at the top right, then select **Create Account** at the bottom to fill in your details.`,
       action: null,
+    };
+  }
+
+  if (msg.includes('room') || msg.includes('suite') || msg.includes('stay') || msg.includes('accommodation')) {
+    return {
+      text: `🏨 **Luxury Stays at Royal Grand**\n\nWe offer four categories of 5-star accommodations:\n• **Presidential Infinity Suite** (Private pool, sea view, 24/7 butler)\n• **Royal Executive Room** (Club Lounge access, premium workspace)\n• **Deluxe Garden Sanctuary Villa** (Plunge pool, botanic garden)\n• **Superior Oceanfront Room** (Ocean panoramic balcony)\n\nClick below to explore our rooms and check availability!`,
+      action: 'rooms',
+    };
+  }
+
+  if (msg.includes('spa') || msg.includes('massage') || msg.includes('wellness') || msg.includes('therapy')) {
+    return {
+      text: `💆 **Spa & Wellness Sanctuary**\n\nIndulge in absolute bliss. Our signature therapies include:\n• **Royal Ayurvedic Rejuvenation** (90 mins)\n• **Deep Tissue Harmony Massage** (60 mins)\n• **Himalayan Salt Scrub & Stones** (75 mins)\n• **Luxury Caviar Anti-Aging Facial** (60 mins)\n\nClick below to browse the spa and submit an inquiry!`,
+      action: 'spa',
+    };
+  }
+
+  if (msg.includes('event') || msg.includes('banquet') || msg.includes('wedding') || msg.includes('hall') || msg.includes('meeting')) {
+    return {
+      text: `🏛️ **Grand Banquets & Venues**\n\nHost your memorable events in our elite settings:\n• **The Grand Empress Ballroom** (Indoor, up to 500 guests)\n• **Royal Pavilion Ocean Lawn** (Outdoor, up to 300 guests)\n• **Majestic Executive Boardroom** (Indoor corporate, up to 25 guests)\n\nClick below to check out details and submit a venue inquiry.`,
+      action: 'events',
     };
   }
 
@@ -36,21 +57,21 @@ function getBotResponse(input) {
     msg.includes('check my orders')
   ) {
     return {
-      text: `📋 **Checking Your Orders**\n\nOnce logged in, click your name dropdown in the top right corner and select **My Orders**. You can view order statuses (Preparing/Delivered) and use the **Reorder** button to cart items again.`,
+      text: `📋 **Checking Your Orders**\n\nGo to your Profile dropdown in the top right and select **My Bookings** or check history. You can view your dining orders and table/room reservations.`,
       action: null,
     };
   }
 
   if (msg.includes('order food') || msg.includes('how to order') || msg.includes('buy')) {
     return {
-      text: `🍔 **How to Order Food**\n\n1. Browse our **Signature Menu**.\n2. Tap the **+** icon to add items to your cart, or click cards for details.\n3. Open the **Cart** (bag icon on the top right).\n4. Click **Proceed to Checkout** to verify your address, select a payment method, and complete the order!`,
-      action: null,
+      text: `🍔 **Dining at Royal Bites Restaurant**\n\n1. Browse our **Royal Bites Menu** page.\n2. Add items to your cart.\n3. Open the **Cart** sidebar.\n4. Click **Proceed to Checkout** to complete your dining order. We deliver to your room or home!`,
+      action: 'menu',
     };
   }
 
   if (msg.includes('payment') || msg.includes('pay') || msg.includes('cod') || msg.includes('upi')) {
     return {
-      text: `💳 **Payment Options**\n\nWe support three major payment methods for your convenience during checkout:\n• **UPI / Scan QR** (Instant & secure)\n• **Cash on Delivery (COD)** (Pay when food arrives)\n• **Credit/Debit Cards** (All major cards accepted)`,
+      text: `💳 **Payment Methods**\n\nWe support UPI/Scan QR, Credit/Debit cards, and Cash on Delivery (COD) for our restaurant orders and room deposits.`,
       action: null,
     };
   }
@@ -63,21 +84,21 @@ function getBotResponse(input) {
     msg.includes('coupon')
   ) {
     return {
-      text: `🎁 **Royal Bites Exclusive Offers** 🎁\n\n• **ROYAL20** — Flat 20% Off on your first table booking.\n• **FAMILY799** — Special Family Combo starting at just ₹799.\n• **FREEGIFT** — Free delicious dessert on orders above ₹999.\n\nUse these codes when booking a table or checking out!`,
+      text: `🎁 **Exclusive Resort & Dining Offers** 🎁\n\n• **SUMMER25** — 25% Off suites for 3+ nights stay.\n• **ROYALRETREAT** — Complimentary 3-course dinner at Royal Bites Restaurant during your stay.\n• **SPAWELLNESS** — Free couple massage on Deluxe Villa bookings.\n\nUse these codes when booking or checking out!`,
       action: 'offers',
     };
   }
 
-  if (msg.includes('menu') || msg.includes('show menu') || msg.includes('food')) {
+  if (msg.includes('menu') || msg.includes('show menu') || msg.includes('food') || msg.includes('restaurant') || msg.includes('dine') || msg.includes('dining')) {
     return {
-      text: `Here's our signature menu:\n\n${formatMenuForChat()}\n\nWould you like to book a table or place an order inquiry?`,
+      text: `🍽️ **Royal Bites Restaurant Menu**:\n\n${formatMenuForChat()}\n\nWould you like to book a table or place a food order?`,
       action: 'menu',
     };
   }
 
-  if (msg.includes('book') || msg.includes('table') || msg.includes('reserv')) {
+  if (msg.includes('book') || msg.includes('table') || msg.includes('reserv') || msg.includes('booking')) {
     return {
-      text: 'I\'d love to help you reserve a table! Scroll to our "Book Your Table" section or click below to go there directly.',
+      text: 'I\'d love to help you book a suite or reserve a table at Royal Bites. Click below to go to our dual reservation panel.',
       action: 'booking',
     };
   }
@@ -90,34 +111,34 @@ function getBotResponse(input) {
     msg.includes('time')
   ) {
     return {
-      text: `🕐 **Royal Bites Hours**\n\n${restaurantInfo.hours.weekdays}\n${restaurantInfo.hours.weekend}\n\n_${restaurantInfo.hours.kitchen}_`,
-      action: 'timing',
+      text: `🕐 **Resort & Dining Hours**\n\n• Resort Front Desk: 24/7\n• Royal Bites Restaurant: ${restaurantInfo.hours.weekdays} (${restaurantInfo.hours.weekend})\n• Spa & Wellness: 8:00 AM - 9:00 PM daily`,
+      action: null,
     };
   }
 
   if (msg.includes('order') && (msg.includes('status') || msg.includes('track'))) {
     return {
-      text: 'To check your order status, please provide your inquiry email or phone number to our team via WhatsApp. Orders are typically confirmed within 30 minutes during service hours.',
+      text: 'To check your restaurant order status, click your order tracking link or contact our concierge via WhatsApp with your order ID.',
       action: 'order-status',
     };
   }
 
   if (msg.includes('whatsapp') || msg.includes('contact') || msg.includes('call')) {
     return {
-      text: 'Connect with us instantly on WhatsApp! Click the green button below or use the floating WhatsApp icon.',
+      text: 'Connect with our resort concierge team instantly on WhatsApp for any special requests!',
       action: 'whatsapp',
     };
   }
 
   if (msg.includes('hello') || msg.includes('hi') || msg.includes('hey')) {
     return {
-      text: `Welcome to ${restaurantInfo.name}! 👑 I'm your virtual concierge. How may I assist you today?\n\nTry: "Show menu", "Book table", "Restaurant timing", "Order status", or "Contact on WhatsApp".`,
+      text: `Welcome to Royal Grand Hotel & Resort! 🏨 I'm your virtual concierge. How may I assist you today?\n\nTry asking about: "Resort Rooms", "Spa & Wellness", "Banquets & Events", "Show menu", or "Book table / room".`,
       action: null,
     };
   }
 
   return {
-    text: 'I can help you with:\n• Show menu\n• Book table\n• Restaurant timing\n• Order status\n• Contact on WhatsApp\n\nWhat would you like to know?',
+    text: 'I can help you with:\n• Resort Rooms & Suites\n• Spa & Wellness Sanctuary\n• Banquets & Grand Events\n• Royal Bites Dining Menu\n• Book table / room\n\nWhat would you like to know?',
     action: null,
   };
 }
@@ -128,7 +149,7 @@ export default function Chatbot({ onWhatsApp }) {
   const [messages, setMessages] = useState([
     {
       role: 'bot',
-      text: `Hello! Welcome to ${restaurantInfo.name}. How can I make your evening royal today?`,
+      text: `Hello! Welcome to Royal Grand Hotel & Resort. How can I make your stay royal today?`,
     },
   ]);
   const [input, setInput] = useState('');
@@ -155,14 +176,19 @@ export default function Chatbot({ onWhatsApp }) {
       navigate('/booking');
       setOpen(false);
     } else if (action === 'offers') {
-      if (window.location.pathname !== '/') {
-        navigate('/');
-        setTimeout(() => {
-          document.querySelector('#offers')?.scrollIntoView({ behavior: 'smooth' });
-        }, 300);
-      } else {
-        document.querySelector('#offers')?.scrollIntoView({ behavior: 'smooth' });
-      }
+      navigate('/offers');
+      setOpen(false);
+    } else if (action === 'rooms') {
+      navigate('/rooms');
+      setOpen(false);
+    } else if (action === 'spa') {
+      navigate('/spa');
+      setOpen(false);
+    } else if (action === 'events') {
+      navigate('/events');
+      setOpen(false);
+    } else if (action === 'menu') {
+      navigate('/menu');
       setOpen(false);
     } else if (action === 'whatsapp') {
       onWhatsApp();

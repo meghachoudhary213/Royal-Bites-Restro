@@ -7,6 +7,11 @@ import MenuPage from './pages/MenuPage';
 import BookingPage from './pages/BookingPage';
 import ContactPage from './pages/ContactPage';
 import AdminDashboard from './pages/AdminDashboard';
+import RoomsPage from './pages/RoomsPage';
+import SpaPage from './pages/SpaPage';
+import EventsPage from './pages/EventsPage';
+import OffersPage from './pages/OffersPage';
+import GalleryPage from './pages/GalleryPage';
 import AuthModal from './components/AuthModal';
 import UserProfile from './components/UserProfile';
 import MyOrders from './components/MyOrders';
@@ -39,6 +44,31 @@ export default function App() {
   });
   const [confirmState, setConfirmState] = useState(null);
   const [isMobile, setIsMobile] = useState(false);
+
+  const [menuCategories, setMenuCategories] = useState(() => {
+    const stored = localStorage.getItem('rb_menu_categories');
+    if (stored) {
+      try {
+        return JSON.parse(stored);
+      } catch (e) {
+        return staticMenuCategories;
+      }
+    }
+    localStorage.setItem('rb_menu_categories', JSON.stringify(staticMenuCategories));
+    return staticMenuCategories;
+  });
+
+  // Modal and detail view states
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isOrdersOpen, setIsOrdersOpen] = useState(false);
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [selectedFoodItem, setSelectedFoodItem] = useState(null);
+  const [shareModalData, setShareModalData] = useState(null);
+
+  // Unified Menu active states for external filters (Mega Menu, Cuisine Explorer)
+  const [activeCategory, setActiveCategory] = useState('north-indian');
+  const [menuSearchQuery, setMenuSearchQuery] = useState('');
 
   useEffect(() => {
     const handleShowConfirm = (e) => {
@@ -90,35 +120,11 @@ export default function App() {
     };
   }, []);
 
-  const [menuCategories, setMenuCategories] = useState(() => {
-    const stored = localStorage.getItem('rb_menu_categories');
-    if (stored) {
-      try {
-        return JSON.parse(stored);
-      } catch (e) {
-        return staticMenuCategories;
-      }
-    }
-    localStorage.setItem('rb_menu_categories', JSON.stringify(staticMenuCategories));
-    return staticMenuCategories;
-  });
-
   const handleUpdateMenu = (newCategories) => {
     localStorage.setItem('rb_menu_categories', JSON.stringify(newCategories));
     setMenuCategories(newCategories);
   };
 
-  // Modal and detail view states
-  const [isAuthOpen, setIsAuthOpen] = useState(false);
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [isOrdersOpen, setIsOrdersOpen] = useState(false);
-  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
-  const [selectedFoodItem, setSelectedFoodItem] = useState(null);
-  const [shareModalData, setShareModalData] = useState(null);
-
-  // Unified Menu active states for external filters (Mega Menu, Cuisine Explorer)
-  const [activeCategory, setActiveCategory] = useState('north-indian');
-  const [menuSearchQuery, setMenuSearchQuery] = useState('');
 
 
   // Listen to menu categories updates from other tabs
@@ -389,6 +395,26 @@ export default function App() {
         <Route
           path="/booking"
           element={<BookingPage />}
+        />
+        <Route
+          path="/rooms"
+          element={<RoomsPage />}
+        />
+        <Route
+          path="/spa"
+          element={<SpaPage />}
+        />
+        <Route
+          path="/events"
+          element={<EventsPage />}
+        />
+        <Route
+          path="/offers"
+          element={<OffersPage />}
+        />
+        <Route
+          path="/gallery"
+          element={<GalleryPage />}
         />
         <Route
           path="/contact"

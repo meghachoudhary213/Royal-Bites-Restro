@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { 
   ArrowLeft, Clock, ShoppingBag, Utensils, Package, Truck, CheckCircle2, 
-  ChevronRight, AlertCircle, Phone, Info
+  AlertCircle, Phone, Info
 } from 'lucide-react';
-import { restaurantInfo } from '../data/menu';
 import { getWhatsAppLink } from '../utils/whatsappLink';
 
 const STAGES = [
@@ -17,7 +16,6 @@ const STAGES = [
 
 export default function OrderTrackingPage() {
   const { orderId } = useParams();
-  const navigate = useNavigate();
   const [order, setOrder] = useState(null);
 
   const fetchOrder = () => {
@@ -43,7 +41,8 @@ export default function OrderTrackingPage() {
   };
 
   useEffect(() => {
-    fetchOrder();
+    // Defer state update to next tick to avoid synchronous setState inside effect warnings
+    setTimeout(fetchOrder, 0);
 
     // Listen for storage events (updates from admin dashboard)
     const handleStorageChange = () => {

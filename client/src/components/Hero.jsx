@@ -1,98 +1,81 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { ArrowRight, Sparkles, Star, Share2 } from 'lucide-react';
-import { restaurantInfo, menuCategories } from '../data/menu';
 import { Link } from 'react-router-dom';
 
-const targetNames = [
-  "Paneer Butter Masala",
-  "Paneer Tikka",
-  "Veg Supreme Pizza",
-  "Hara Bhara Kebab",
-  "Veg Spring Roll",
-  "Chole Bhature",
-  "Masala Chai",
-  "Gulab Jamun"
+const hotelSlides = [
+  {
+    id: 1,
+    title: "Sanctuary of Pure Grandeur",
+    subtitle: "Experience 5-star oceanfront luxury where timeless heritage meets contemporary elegance.",
+    image: "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1600&q=80",
+    tag: "Welcome to Royal Grand",
+    rating: "5.0",
+    link: "/rooms"
+  },
+  {
+    id: 2,
+    title: "Lavish Suites & Ocean Villas",
+    subtitle: "Indulge in private heated infinity pools and personalized 24/7 butler services.",
+    image: "https://images.unsplash.com/photo-1618773928121-c32242e63f39?auto=format&fit=crop&w=1600&q=80",
+    tag: "Accommodations",
+    rating: "4.9",
+    link: "/rooms"
+  },
+  {
+    id: 3,
+    title: "Gourmet Michelin-Style Dining",
+    subtitle: "Savor exquisite culinary art prepared by award-winning chefs at Royal Bites.",
+    image: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=1600&q=80",
+    tag: "Royal Bites Restaurant",
+    rating: "4.9",
+    link: "/menu"
+  },
+  {
+    id: 4,
+    title: "Tranquility & Rejuvenation",
+    subtitle: "Restore absolute harmony with traditional Ayurvedic rituals and stone therapies.",
+    image: "https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=1600&q=80",
+    tag: "Spa & Wellness Sanctuary",
+    rating: "5.0",
+    link: "/spa"
+  }
 ];
 
-// Flat list of all dishes
-const allDishes = menuCategories.flatMap((cat) => cat.items);
-
-// Featured dishes prioritized based on targetNames list
-const featuredDishes = targetNames
-  .map((name) => allDishes.find((item) => item.name === name))
-  .filter(Boolean);
-
 export default function Hero() {
-  const [currentDish, setCurrentDish] = useState(featuredDishes[0]);
-  const [activeIndicatorDish, setActiveIndicatorDish] = useState(featuredDishes[0]);
-  const [nextDish, setNextDish] = useState(null);
+  const [currentIdx, setCurrentIdx] = useState(0);
   const [transitionState, setTransitionState] = useState('idle'); // 'idle' | 'leaving' | 'entering'
   const [isHovered, setIsHovered] = useState(false);
 
-  // Initialize a random next dish on mount for preloading
-  useEffect(() => {
-    const remaining = featuredDishes.filter((dish) => dish.name !== currentDish.name);
-    if (remaining.length > 0) {
-      setNextDish(remaining[Math.floor(Math.random() * remaining.length)]);
-    }
-  }, []);
+  const currentSlide = hotelSlides[currentIdx];
+  const nextIdx = (currentIdx + 1) % hotelSlides.length;
+  const nextSlide = hotelSlides[nextIdx];
 
-  // Update nextDish to preload when currentDish changes or transition ends
-  useEffect(() => {
-    if (transitionState === 'idle') {
-      const remaining = featuredDishes.filter((dish) => dish.name !== currentDish.name);
-      if (remaining.length > 0) {
-        setNextDish(remaining[Math.floor(Math.random() * remaining.length)]);
-      }
-    }
-  }, [currentDish, transitionState]);
-
-  // Preloader: creates an Image object to load the next dish image in browser cache
-  useEffect(() => {
-    if (nextDish) {
-      const img = new Image();
-      img.src = nextDish.image;
-    }
-  }, [nextDish]);
-
-  const triggerTransition = (targetDish) => {
-    if (transitionState !== 'idle' || targetDish.name === currentDish.name) return;
-
-    // 1. Update carousel indicators instantly
-    setActiveIndicatorDish(targetDish);
-
-    // 2. Start fade-out of current dish (400ms duration)
+  const triggerTransition = (targetIdx) => {
+    if (transitionState !== 'idle' || targetIdx === currentIdx) return;
     setTransitionState('leaving');
-
-    // 3. After 400ms fade-out, swap data to the new dish and trigger fade-in
     setTimeout(() => {
-      setCurrentDish(targetDish);
+      setCurrentIdx(targetIdx);
       setTransitionState('entering');
-
-      // 4. After 400ms fade-in, transition is complete (800ms total transition)
       setTimeout(() => {
         setTransitionState('idle');
       }, 400);
     }, 400);
   };
 
-  // Auto rotation: change dish every 2.5 seconds when idle and not hovered
+  // Preloader for the next slide's image
+  useEffect(() => {
+    const img = new Image();
+    img.src = nextSlide.image;
+  }, [nextSlide]);
+
+  // Auto rotation every 4 seconds when not hovered and idle
   useEffect(() => {
     if (isHovered || transitionState !== 'idle') return;
-
     const interval = setInterval(() => {
-      if (nextDish) {
-        triggerTransition(nextDish);
-      }
-    }, 2500);
-
+      triggerTransition(nextIdx);
+    }, 4000);
     return () => clearInterval(interval);
-  }, [currentDish, nextDish, isHovered, transitionState]);
-
-  const handleIndicatorClick = (dish) => {
-    if (transitionState !== 'idle' || dish.name === currentDish.name) return;
-    triggerTransition(dish);
-  };
+  }, [currentIdx, isHovered, transitionState]);
 
   // 3D Hover Tilt Effect
   const handleMouseMove = (e) => {
@@ -100,9 +83,9 @@ export default function Hero() {
     const box = card.getBoundingClientRect();
     const x = e.clientX - box.left - box.width / 2;
     const y = e.clientY - box.top - box.height / 2;
-    const rotateX = -(y / box.height) * 15; // Max 15 degrees tilt
-    const rotateY = (x / box.width) * 15;
-    card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.02)`;
+    const rotateX = -(y / box.height) * 10;
+    const rotateY = (x / box.width) * 10;
+    card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.01)`;
   };
 
   const handleMouseLeave = (e) => {
@@ -111,70 +94,53 @@ export default function Hero() {
     card.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale(1)';
   };
 
-  const getDishTag = (dish) => {
-    return dish.tag || (dish.popular ? 'Bestseller' : 'Chef Special');
-  };
-
   return (
     <section
       id="home"
       className="relative min-h-screen flex items-center overflow-hidden hero-gradient"
     >
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 -left-32 w-96 h-96 bg-sunset/20 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 -right-32 w-[500px] h-[500px] bg-gold/15 rounded-full blur-3xl" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-pink/10 rounded-full blur-3xl" />
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+        <div className="absolute top-1/4 -left-32 w-96 h-96 bg-sunset/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/4 -right-32 w-[500px] h-[500px] bg-pink/5 rounded-full blur-3xl" />
       </div>
 
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-20 w-full">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-          <div className="space-y-8">
+          <div className="space-y-8 text-left">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass text-sm text-gold">
               <Sparkles className="w-4 h-4" />
-              <span>Award-Winning Fine Dining Experience</span>
+              <span>5-Star Luxury Resort Destination</span>
             </div>
 
-            <h1 className="font-display text-5xl sm:text-6xl lg:text-7xl font-bold leading-tight">
+            <h1 className="font-display text-4xl sm:text-6xl lg:text-7xl font-bold leading-tight">
               <span className="text-cream">Experience</span>
               <br />
-              <span className="text-gradient">Royal Bites</span>
+              <span className="text-gradient">Royal Grand</span>
             </h1>
 
-            <p className="text-lg md:text-xl text-cream/70 max-w-lg leading-relaxed">
-              {restaurantInfo.tagline}. Indulge in exquisite cuisine crafted with passion,
-              served in an atmosphere of timeless elegance beneath the golden sunset.
+            <p className="text-base sm:text-lg text-cream/70 max-w-lg leading-relaxed min-h-[5rem]">
+              {currentSlide.subtitle}
             </p>
 
             <div className="flex flex-wrap gap-4">
-              <Link to="/booking" className="btn-primary">
-                Reserve a Table
+              <Link to="/booking" className="btn-primary py-3 px-6 text-xs sm:text-sm font-bold uppercase tracking-wider">
+                Book A Stay
                 <ArrowRight className="w-5 h-5" />
               </Link>
-              <Link to="/menu" className="btn-secondary">
-                Explore Menu
+              <Link to={currentSlide.link} className="btn-secondary py-3 px-6 text-xs sm:text-sm font-bold uppercase tracking-wider">
+                Explore Details
               </Link>
-              <button 
-                onClick={() => window.triggerShare && window.triggerShare({
-                  title: 'Royal Bites',
-                  text: 'Experience premium dining at Royal Bites 🍽️',
-                  url: 'https://royal-bites-restro.onrender.com'
-                })}
-                className="btn-secondary flex items-center gap-2 cursor-pointer"
-              >
-                <Share2 className="w-4 h-4" />
-                Share
-              </button>
             </div>
 
             <div className="flex gap-8 pt-4">
               {[
-                { value: '15+', label: 'Years Excellence' },
-                { value: '50+', label: 'Signature Dishes' },
+                { value: '5-Star', label: 'Hotel & Resort' },
                 { value: '4.9', label: 'Guest Rating' },
+                { value: '24/7', label: 'Butler Service' },
               ].map((stat) => (
                 <div key={stat.label}>
-                  <p className="text-2xl md:text-3xl font-bold text-gold">{stat.value}</p>
-                  <p className="text-sm text-cream/50">{stat.label}</p>
+                  <p className="text-2xl sm:text-3xl font-bold text-gold">{stat.value}</p>
+                  <p className="text-xs text-cream/50">{stat.label}</p>
                 </div>
               ))}
             </div>
@@ -183,46 +149,45 @@ export default function Hero() {
           <div className="relative">
             <div className="relative animate-float">
               <div
-                className="relative rounded-3xl overflow-hidden glass-strong p-2 tilt-container transition-all duration-300 hover:shadow-[0_0_40px_rgba(255,107,53,0.35)] shadow-[0_0_20px_rgba(255,209,102,0.15)] cursor-pointer"
+                className="relative rounded-3xl overflow-hidden glass-strong p-2 tilt-container transition-all duration-300 hover:shadow-[0_0_40px_rgba(42,103,219,0.3)] shadow-[0_0_20px_rgba(255,255,255,0.05)] cursor-pointer"
                 onMouseMove={handleMouseMove}
                 onMouseLeave={handleMouseLeave}
                 onMouseEnter={() => setIsHovered(true)}
               >
                 {/* Images Showcase Area */}
-                <div className="relative w-full h-[400px] sm:h-[500px] lg:h-[580px] rounded-2xl overflow-hidden">
+                <div className="relative w-full h-[320px] sm:h-[450px] lg:h-[520px] rounded-2xl overflow-hidden">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       window.triggerShare && window.triggerShare({
-                        title: 'Royal Bites',
-                        text: `Check out ${currentDish.name} at Royal Bites 🍽️`,
-                        url: 'https://royal-bites-restro.onrender.com/menu'
+                        title: 'Royal Grand Hotel & Resort',
+                        text: `${currentSlide.title} — 5-star experience 🏨`,
+                        url: window.location.origin
                       });
                     }}
-                    className="absolute top-4 left-4 z-40 p-3 rounded-full bg-navy/80 border border-white/10 text-cream/80 hover:text-gold hover:bg-navy transition-all duration-300 shadow-lg cursor-pointer animate-fade-in-400"
-                    aria-label={`Share ${currentDish.name}`}
-                    title={`Share ${currentDish.name}`}
+                    className="absolute top-4 left-4 z-40 p-3 rounded-full bg-navy/80 border border-white/10 text-cream/80 hover:text-gold hover:bg-navy transition-all duration-300 shadow-lg cursor-pointer"
+                    aria-label="Share slide details"
                   >
                     <Share2 className="w-4 h-4" />
                   </button>
 
                   <img
-                    key={currentDish.name}
-                    src={currentDish.image}
-                    alt={currentDish.name}
-                    className={`w-full h-full object-cover animate-ken-burns ${
+                    key={currentSlide.id}
+                    src={currentSlide.image}
+                    alt={currentSlide.title}
+                    className={`w-full h-full object-cover ${
                       transitionState === 'leaving' ? 'animate-fade-out-400' :
                       transitionState === 'entering' ? 'animate-fade-in-400' : ''
                     }`}
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-navy/80 via-transparent to-transparent pointer-events-none" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-navy/90 via-transparent to-transparent pointer-events-none" />
                 </div>
 
-                {/* Glassmorphic Dish Info Overlay */}
+                {/* Glassmorphic Slide Info Overlay */}
                 <div className="absolute bottom-8 left-8 right-8 z-30">
                   <div
-                    key={currentDish.name}
-                    className={`glass-card p-5 border border-white/10 rounded-2xl relative ${
+                    key={currentSlide.id}
+                    className={`glass-card p-5 border border-white/10 rounded-2xl relative text-left ${
                       transitionState === 'leaving' ? 'animate-fade-out-400' :
                       transitionState === 'entering' ? 'animate-fade-in-400' : ''
                     }`}
@@ -230,34 +195,27 @@ export default function Hero() {
                     <div className="flex justify-between items-start gap-2">
                       <div>
                         <span className="inline-block px-2.5 py-0.5 rounded-full bg-sunset/20 text-sunset text-[10px] font-bold uppercase tracking-wider mb-2">
-                          {getDishTag(currentDish)}
+                          {currentSlide.tag}
                         </span>
                         <p className="text-gold text-xs font-semibold mb-1 flex items-center gap-1">
-                          <Star className="w-3.5 h-3.5 fill-gold text-gold" /> {currentDish.rating} Rating
+                          <Star className="w-3.5 h-3.5 fill-gold text-gold" /> {currentSlide.rating} Review Rating
                         </p>
-                        <p className="font-display text-xl sm:text-2xl font-bold text-cream">{currentDish.name}</p>
-                        <p className="text-cream/60 text-xs mt-1 leading-relaxed">
-                          {currentDish.description}
-                        </p>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <span className="text-[10px] text-cream/40 block leading-none mb-1 uppercase tracking-wider">Price</span>
-                        <span className="font-display text-2xl font-bold text-gradient">₹{currentDish.price}</span>
+                        <p className="font-display text-lg sm:text-2xl font-bold text-cream leading-tight">{currentSlide.title}</p>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Carousel Indicators / Controls */}
+              {/* Carousel Indicators */}
               <div className="flex justify-center gap-2.5 mt-6 relative z-40">
-                {featuredDishes.map((dish, idx) => (
+                {hotelSlides.map((slide, idx) => (
                   <button
-                    key={dish.name}
-                    onClick={() => handleIndicatorClick(dish)}
+                    key={slide.id}
+                    onClick={() => triggerTransition(idx)}
                     className={`w-2.5 h-2.5 rounded-full cursor-pointer transition-all duration-300 ${
-                      activeIndicatorDish.name === dish.name
-                        ? 'bg-gold w-6 shadow-[0_0_8px_rgba(255,209,102,0.8)]'
+                      currentIdx === idx
+                        ? 'bg-gold w-6 shadow-[0_0_8px_rgba(255,255,255,0.8)]'
                         : 'bg-cream/30 hover:bg-cream/60'
                     }`}
                     aria-label={`Go to slide ${idx + 1}`}
@@ -266,27 +224,16 @@ export default function Hero() {
               </div>
             </div>
 
-            {/* Hidden image element to force browser-level preloading for nextDish */}
-            {nextDish && (
+            {/* Hidden image element to force preloading */}
+            {nextSlide && (
               <img
-                src={nextDish.image}
+                src={nextSlide.image}
                 className="hidden"
                 aria-hidden="true"
                 alt=""
               />
             )}
-
-            {/* Floating Brand Badge */}
-            <div className="absolute -top-4 -right-4 w-24 h-24 glass rounded-2xl flex items-center justify-center pointer-events-none">
-              <span className="font-display text-2xl text-gradient font-bold">RB</span>
-            </div>
           </div>
-        </div>
-      </div>
-
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
-        <div className="w-6 h-10 rounded-full border-2 border-cream/30 flex justify-center pt-2">
-          <div className="w-1 h-2 bg-gold rounded-full" />
         </div>
       </div>
     </section>

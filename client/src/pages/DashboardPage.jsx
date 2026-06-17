@@ -99,8 +99,19 @@ export default function DashboardPage({ currentUser, onUpdateProfile, onLogout, 
   }, [currentUser]);
 
   const [bookingsList, setBookingsList] = useState([]);
+  const [roomBookingsList, setRoomBookingsList] = useState([]);
   const [loadingBookings, setLoadingBookings] = useState(false);
   const [bookingsError, setBookingsError] = useState('');
+
+  // Fetch room bookings from localStorage
+  useEffect(() => {
+    if (!currentUser) return;
+    const localRoomBookings = JSON.parse(localStorage.getItem('rb_room_bookings') || '[]');
+    const userRoomBookings = localRoomBookings.filter(
+      b => b.email && b.email.toLowerCase() === currentUser.email.toLowerCase()
+    );
+    setRoomBookingsList(userRoomBookings);
+  }, [currentUser]);
 
   // Fetch bookings from MongoDB with local fallback
   useEffect(() => {
@@ -793,71 +804,131 @@ export default function DashboardPage({ currentUser, onUpdateProfile, onLogout, 
 
             {/* MY BOOKINGS TAB */}
             {activeTab === 'bookings' && (
-              <div className="space-y-6">
-                <div>
-                  <h3 className="font-display text-xl font-bold text-cream">My Table Bookings</h3>
-                  <p className="text-xs text-cream/40 mt-0.5">Track the status of your dining reservations</p>
-                </div>
-
-                {loadingBookings ? (
-                  <div className="text-center py-12">
-                    <p className="text-sm text-cream/55">Loading your reservations...</p>
+              <div className="space-y-10">
+                {/* ROOM BOOKINGS SECTION */}
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="font-display text-xl font-bold text-cream">My Stay Reservations</h3>
+                    <p className="text-xs text-cream/40 mt-0.5">Track your luxury room and villa stays</p>
                   </div>
-                ) : bookingsList.length > 0 ? (
-                  <div className="space-y-4">
-                    {bookingsList.map((booking) => (
-                      <div key={booking._id || booking.id} className="glass p-5 rounded-2xl border border-white/10 hover:border-white/20 transition-all flex flex-col gap-4">
-                        <div className="flex flex-wrap justify-between items-center gap-2 pb-3 border-b border-white/5">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-mono text-cream/40 block">RESERVATION ID</span>
-                            <span className="text-sm font-mono font-bold text-gold">{booking._id || booking.id}</span>
-                          </div>
-                          
-                          <div className="flex items-center gap-3">
-                            <span className="text-xs text-cream/55">{booking.date} at {booking.time}</span>
-                            <span className={`px-2.5 py-0.5 rounded-full border text-[10px] font-bold uppercase ${
-                              booking.status === 'confirmed' 
-                                ? 'bg-green-500/20 text-green-300 border-green-500/30' 
-                                : booking.status === 'cancelled'
-                                  ? 'bg-red-500/20 text-red-300 border-red-500/30'
-                                  : booking.status === 'seated'
-                                    ? 'bg-blue-500/20 text-blue-300 border-blue-500/30'
-                                    : booking.status === 'completed'
-                                      ? 'bg-teal-500/20 text-teal-300 border-teal-500/30'
-                                      : 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30 animate-pulse'
-                            }`}>
+
+                  {roomBookingsList.length > 0 ? (
+                    <div className="grid md:grid-cols-2 gap-6">
+                      {roomBookingsList.map((booking) => (
+                        <div key={booking.id} className="glass p-5 rounded-2xl border border-white/10 hover:border-white/20 transition-all flex flex-col gap-4">
+                          <div className="flex justify-between items-center pb-3 border-b border-white/5">
+                            <div>
+                              <span className="text-[9px] font-mono text-cream/40 block">BOOKING ID</span>
+                              <span className="text-xs font-mono font-bold text-gold">{booking.id}</span>
+                            </div>
+                            <span className="px-2.5 py-0.5 rounded-full bg-green-500/20 text-green-300 border border-green-500/30 text-[10px] font-bold uppercase">
                               {booking.status}
                             </span>
                           </div>
-                        </div>
 
-                        <div className="grid sm:grid-cols-2 gap-4 text-xs text-cream/80">
-                          <div>
-                            <span className="text-[10px] text-cream/40 block">GUESTS & OCCASION</span>
-                            <span className="font-semibold text-cream text-sm">{booking.guests} {booking.guests === 1 ? 'Guest' : 'Guests'} — {booking.occasion}</span>
-                          </div>
-                          {booking.specialRequests && (
-                            <div>
-                              <span className="text-[10px] text-cream/40 block">SPECIAL REQUESTS</span>
-                              <p className="text-cream/70 italic">&ldquo;{booking.specialRequests}&rdquo;</p>
+                          <div className="flex gap-4 items-center">
+                            {booking.image && (
+                              <img src={booking.image} alt={booking.roomName} className="w-16 h-16 rounded-xl object-cover shrink-0" />
+                            )}
+                            <div className="text-left">
+                              <h4 className="font-display font-bold text-sm text-cream">{booking.roomName}</h4>
+                              <p className="text-[11px] text-cream/60 mt-0.5">₹{booking.roomPrice?.toLocaleString()} / night</p>
                             </div>
-                          )}
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2 text-left text-xs text-cream/70 bg-white/5 p-3 rounded-xl">
+                            <div>
+                              <span className="text-[9px] text-cream/40 block">DATES</span>
+                              <span>{booking.checkIn} to {booking.checkOut}</span>
+                            </div>
+                            <div>
+                              <span className="text-[9px] text-cream/40 block">GUESTS</span>
+                              <span>{booking.guests} Guest(s)</span>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 glass rounded-2xl p-6 text-cream/50">
+                      <p className="text-sm">You haven't reserved any rooms yet.</p>
+                      <button
+                        onClick={() => navigate('/rooms')}
+                        className="text-xs text-sunset font-bold hover:underline mt-2 cursor-pointer bg-transparent border-0"
+                      >
+                        Browse rooms & suites
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* TABLE BOOKINGS SECTION */}
+                <div className="space-y-6 pt-4 border-t border-white/5">
+                  <div>
+                    <h3 className="font-display text-xl font-bold text-cream">My Table Bookings</h3>
+                    <p className="text-xs text-cream/40 mt-0.5">Track the status of your dining reservations at Royal Bites</p>
                   </div>
-                ) : (
-                  <div className="text-center py-12 glass rounded-2xl p-6 text-cream/50">
-                    <Calendar className="w-12 h-12 mx-auto text-cream/30 mb-3" />
-                    <p className="text-sm">You haven't reserved any tables yet.</p>
-                    <button
-                      onClick={() => navigate('/booking')}
-                      className="text-xs text-sunset font-bold hover:underline mt-2 cursor-pointer bg-transparent border-0"
-                    >
-                      Book a table now
-                    </button>
-                  </div>
-                )}
+
+                  {loadingBookings ? (
+                    <div className="text-center py-8">
+                      <p className="text-sm text-cream/55">Loading your reservations...</p>
+                    </div>
+                  ) : bookingsList.length > 0 ? (
+                    <div className="space-y-4">
+                      {bookingsList.map((booking) => (
+                        <div key={booking._id || booking.id} className="glass p-5 rounded-2xl border border-white/10 hover:border-white/20 transition-all flex flex-col gap-4">
+                          <div className="flex flex-wrap justify-between items-center gap-2 pb-3 border-b border-white/5">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-mono text-cream/40 block">RESERVATION ID</span>
+                              <span className="text-sm font-mono font-bold text-gold">{booking._id || booking.id}</span>
+                            </div>
+                            
+                            <div className="flex items-center gap-3">
+                              <span className="text-xs text-cream/55">{booking.date} at {booking.time}</span>
+                              <span className={`px-2.5 py-0.5 rounded-full border text-[10px] font-bold uppercase ${
+                                booking.status === 'confirmed' 
+                                  ? 'bg-green-500/20 text-green-300 border-green-500/30' 
+                                  : booking.status === 'cancelled'
+                                    ? 'bg-red-500/20 text-red-300 border-red-500/30'
+                                    : booking.status === 'seated'
+                                      ? 'bg-blue-500/20 text-blue-300 border-blue-500/30'
+                                      : booking.status === 'completed'
+                                        ? 'bg-teal-500/20 text-teal-300 border-teal-500/30'
+                                        : 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30 animate-pulse'
+                              }`}>
+                                {booking.status}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="grid sm:grid-cols-2 gap-4 text-xs text-cream/80 text-left">
+                            <div>
+                              <span className="text-[10px] text-cream/40 block">GUESTS & OCCASION</span>
+                              <span className="font-semibold text-cream text-sm">{booking.guests} {booking.guests === 1 ? 'Guest' : 'Guests'} — {booking.occasion}</span>
+                            </div>
+                            {booking.specialRequests && (
+                              <div>
+                                <span className="text-[10px] text-cream/40 block">SPECIAL REQUESTS</span>
+                                <p className="text-cream/70 italic">&ldquo;{booking.specialRequests}&rdquo;</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 glass rounded-2xl p-6 text-cream/50">
+                      <Calendar className="w-12 h-12 mx-auto text-cream/30 mb-3" />
+                      <p className="text-sm">You haven't reserved any tables yet.</p>
+                      <button
+                        onClick={() => navigate('/booking?tab=table')}
+                        className="text-xs text-sunset font-bold hover:underline mt-2 cursor-pointer bg-transparent border-0"
+                      >
+                        Book a table now
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import Footer from '../components/Footer';
-import { Star, Search, Plus, Eye, ShoppingBag, Heart } from 'lucide-react';
+import { Star, Search, Plus, Eye, Heart } from 'lucide-react';
 
 const VegIndicator = ({ isVeg }) => (
   <span 
