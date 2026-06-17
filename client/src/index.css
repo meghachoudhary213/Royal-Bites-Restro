@@ -1,17 +1,17 @@
 @import "tailwindcss";
 
 @theme {
-  --color-navy: #0A1931;
-  --color-navy-light: #15305B;
-  --color-navy-dark: #051026;
-  --color-sunset: #2A67DB;
-  --color-sunset-dark: #1D4ED8;
-  --color-gold: #BAC8DE;
-  --color-gold-dark: #94A3B8;
-  --color-pink: #E6EDF8;
-  --color-pink-soft: #D1D5DB;
-  --color-cream: #FAF9F6;
-  --color-cream-dark: #F0EDE5;
+  --color-navy: #FCFAF6;          /* Ivory / warm cream background */
+  --color-navy-light: #FAF5EB;    /* Light Warm Cream background for sections/panels */
+  --color-navy-dark: #ECE5D8;     /* Warm Cream Dark for contrast/dropdowns/footers */
+  --color-sunset: #C8A97E;        /* Luxurious Champagne Accent */
+  --color-sunset-dark: #A98553;   /* Bronze Accent */
+  --color-gold: #D9C5B2;          /* Light Champagne */
+  --color-gold-dark: #B9A185;     /* Champagne Bronze */
+  --color-pink: #FCFAF6;          /* Ivory/Cream */
+  --color-pink-soft: #E6DFD3;     /* Warm cream soft */
+  --color-cream: #0B281B;         /* Deep Emerald Green (default body text) */
+  --color-cream-dark: #071C12;    /* Even deeper Emerald Green for bold text */
   --font-display: "Playfair Display", Georgia, serif;
   --font-body: "Inter", system-ui, sans-serif;
 }
@@ -27,43 +27,43 @@
   }
 
   ::selection {
-    @apply bg-sunset/40 text-cream;
+    @apply bg-emerald-800/25 text-[#0B281B];
   }
 }
 
 @utility glass {
-  @apply bg-white/10 backdrop-blur-xl border border-white/20 shadow-xl;
+  @apply bg-white/70 backdrop-blur-xl border border-[#0B281B]/10 shadow-xl;
 }
 
 @utility glass-strong {
-  @apply bg-white/15 backdrop-blur-2xl border border-white/25 shadow-2xl;
+  @apply bg-white/85 backdrop-blur-2xl border border-[#0B281B]/15 shadow-2xl;
 }
 
 @utility glass-card {
-  @apply bg-gradient-to-br from-white/15 to-white/5 backdrop-blur-xl border border-white/20 rounded-2xl shadow-xl;
+  @apply bg-gradient-to-br from-white/80 to-white/50 backdrop-blur-xl border border-[#0B281B]/10 rounded-2xl shadow-lg hover:shadow-xl hover:border-[#0B281B]/20 transition-all duration-300;
 }
 
 @utility text-gradient {
-  @apply bg-gradient-to-r from-gold via-sunset to-pink bg-clip-text text-transparent;
+  @apply bg-gradient-to-r from-[#0B281B] via-[#1B3E2D] to-[#A98553] bg-clip-text text-transparent;
 }
 
 @utility btn-primary {
   @apply inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full font-semibold
-    bg-gradient-to-r from-sunset to-gold-dark text-cream
-    hover:from-gold hover:to-sunset transition-all duration-300
-    shadow-lg shadow-sunset/30 hover:shadow-sunset/50 hover:-translate-y-0.5;
+    bg-gradient-to-r from-[#0B281B] to-[#1B3E2D] text-[#FCFAF6]
+    hover:from-[#C8A97E] hover:to-[#A98553] hover:text-[#0B281B] transition-all duration-300
+    shadow-lg shadow-emerald-950/20 hover:shadow-amber-900/30 hover:-translate-y-0.5;
 }
 
 @utility btn-secondary {
   @apply inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full font-semibold
-    bg-white/10 backdrop-blur-xl border border-white/20 shadow-xl text-cream
-    hover:bg-white/20 transition-all duration-300 hover:-translate-y-0.5;
+    bg-white/70 backdrop-blur-xl border border-[#0B281B]/20 text-[#0B281B]
+    hover:bg-[#FAF5EB] hover:border-[#0B281B]/40 transition-all duration-300 hover:-translate-y-0.5;
 }
 
 @utility input-field {
-  @apply w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-cream
-    placeholder:text-cream/50 focus:outline-none focus:ring-2 focus:ring-sunset/50
-    focus:border-sunset/50 transition-all;
+  @apply w-full px-4 py-3 rounded-xl bg-white/70 border border-[#0B281B]/20 text-[#0B281B]
+    placeholder:text-[#0B281B]/50 focus:outline-none focus:ring-2 focus:ring-[#C8A97E]/50
+    focus:border-[#C8A97E]/50 transition-all;
 }
 
 @utility section-title {
@@ -71,26 +71,28 @@
   @apply text-4xl md:text-5xl font-bold text-gradient;
 }
 
+@utility text-navy {
+  color: #0B281B !important;
+}
+
 .hero-gradient {
   background: linear-gradient(
     160deg,
-    #051026 0%,
-    #0A1931 30%,
-    #15305B 50%,
-    rgba(42, 103, 219, 0.4) 75%,
-    rgba(186, 200, 222, 0.3) 90%,
-    rgba(230, 237, 248, 0.2) 100%
+    #FCFAF6 0%,
+    #FAF5EB 40%,
+    #ECE5D8 70%,
+    rgba(200, 169, 126, 0.15) 90%,
+    rgba(11, 40, 27, 0.05) 100%
   );
 }
 
 .sunset-gradient {
   background: linear-gradient(
     135deg,
-    #0A1931 0%,
-    #15305B 25%,
-    #2A67DB 55%,
-    #BAC8DE 75%,
-    #E6EDF8 100%
+    #0B281B 0%,      /* Deep Emerald */
+    #1B3E2D 40%,     /* Mid Emerald */
+    #C8A97E 75%,     /* Champagne Accent */
+    #A98553 100%     /* Bronze Accent */
   );
 }
 
@@ -202,6 +204,3 @@
   transform-style: preserve-3d;
   will-change: transform;
 }
-
-
-
