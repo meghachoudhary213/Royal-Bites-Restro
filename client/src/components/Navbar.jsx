@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { Menu, X, Crown, ShoppingBag, User, LogOut, History, ChevronDown } from 'lucide-react';
+import { Menu, X, Crown, ShoppingBag, User, LogOut, History, ChevronDown, Sun, Moon } from 'lucide-react';
 
 const navLinks = [
   { href: '/', label: 'Home' },
@@ -22,7 +22,9 @@ export default function Navbar({
   onOpenProfile, 
   onOpenOrders,
   onSelectCategory,
-  onItemClick
+  onItemClick,
+  theme,
+  toggleTheme
 }) {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -114,6 +116,16 @@ export default function Navbar({
               </button>
             )}
 
+            {/* Desktop Theme Toggle Button */}
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="p-2.5 rounded-xl glass hover:bg-white/15 text-cream transition-all duration-300 flex items-center justify-center cursor-pointer"
+              aria-label="Toggle dark/light mode"
+            >
+              {theme === 'dark' ? <Sun className="w-5 h-5 text-gold" /> : <Moon className="w-5 h-5 text-gold" />}
+            </button>
+
             {/* Desktop Cart Button */}
             <button
               type="button"
@@ -139,6 +151,16 @@ export default function Navbar({
           </div>
 
           <div className="flex items-center gap-3 lg:hidden">
+            {/* Mobile Theme Toggle Button */}
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="p-2 rounded-xl glass text-cream flex items-center justify-center cursor-pointer"
+              aria-label="Toggle dark/light mode"
+            >
+              {theme === 'dark' ? <Sun className="w-5 h-5 text-gold" /> : <Moon className="w-5 h-5 text-gold" />}
+            </button>
+
             {/* Mobile Cart Button */}
             <button
               type="button"

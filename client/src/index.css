@@ -1,17 +1,93 @@
 @import "tailwindcss";
 
+:root {
+  --background: #F8F6F1;          /* Soft Ivory White page background */
+  --panel-bg: #F1EDE4;            /* Light Ivory background for sections/panels */
+  --panel-contrast: #E4DDD3;      /* Ivory Dark for contrast/dropdowns/footers */
+  --text-primary: #0F172A;        /* Deep Navy (default body text) */
+  --text-secondary: #090D1A;      /* Even deeper Navy for bold headings */
+  
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-bg-strong: rgba(255, 255, 255, 0.85);
+  --glass-border: rgba(192, 192, 192, 0.2);
+  --glass-border-strong: rgba(192, 192, 192, 0.25);
+  --glass-card-from: rgba(255, 255, 255, 0.8);
+  --glass-card-to: rgba(255, 255, 255, 0.5);
+
+  --btn-sec-bg: rgba(255, 255, 255, 0.7);
+  --btn-sec-border: rgba(30, 58, 138, 0.2);
+  --btn-sec-text: #1E3A8A;
+  --btn-sec-hover-bg: #F1EDE4;
+  --btn-sec-hover-border: rgba(30, 58, 138, 0.4);
+
+  --input-bg: rgba(255, 255, 255, 0.7);
+  --input-border: rgba(15, 23, 42, 0.2);
+  --text-placeholder: rgba(15, 23, 42, 0.5);
+
+  --hero-grad-1: #F8F6F1;
+  --hero-grad-2: #F1EDE4;
+  --hero-grad-3: #E4DDD3;
+  --hero-grad-4: rgba(192, 192, 192, 0.15);
+  --hero-grad-5: rgba(15, 23, 42, 0.05);
+
+  --text-grad-1: #0F172A;
+  --text-grad-2: #1E3A8A;
+  --text-grad-3: #94A3B8;
+
+  --selection-bg: rgba(30, 58, 138, 0.2);
+  --selection-text: #0F172A;
+}
+
+.dark {
+  --background: #0F172A;          /* Midnight Navy / Charcoal background */
+  --panel-bg: #1E293B;            /* Dark glass/panel */
+  --panel-contrast: #090E1A;      /* Even deeper navy/black panel */
+  --text-primary: #F8F6F1;        /* Soft Ivory text */
+  --text-secondary: #FAF9F6;      /* Bright ivory/white headings */
+  
+  --glass-bg: rgba(30, 41, 59, 0.7);      /* #1E293B dark glass */
+  --glass-bg-strong: rgba(30, 41, 59, 0.85);
+  --glass-border: rgba(192, 192, 192, 0.15);
+  --glass-border-strong: rgba(192, 192, 192, 0.2);
+  --glass-card-from: rgba(30, 41, 59, 0.8);
+  --glass-card-to: rgba(30, 41, 59, 0.5);
+
+  --btn-sec-bg: rgba(30, 41, 59, 0.7);
+  --btn-sec-border: rgba(30, 58, 138, 0.3);
+  --btn-sec-text: #F8F6F1;
+  --btn-sec-hover-bg: #1E293B;
+  --btn-sec-hover-border: rgba(30, 58, 138, 0.5);
+
+  --input-bg: rgba(30, 41, 59, 0.7);
+  --input-border: rgba(248, 246, 241, 0.2);
+  --text-placeholder: rgba(248, 246, 241, 0.5);
+
+  --hero-grad-1: #0F172A;
+  --hero-grad-2: #1E293B;
+  --hero-grad-3: #090E1A;
+  --hero-grad-4: rgba(192, 192, 192, 0.05);
+  --hero-grad-5: rgba(15, 23, 42, 0.2);
+
+  --text-grad-1: #F8F6F1;
+  --text-grad-2: #1E3A8A;
+  --text-grad-3: #C0C0C0;
+
+  --selection-bg: rgba(248, 246, 241, 0.2);
+  --selection-text: #F8F6F1;
+}
+
 @theme {
-  --color-navy: #F8F6F1;          /* Soft Ivory White page background */
-  --color-navy-light: #F1EDE4;    /* Light Ivory background for sections/panels */
-  --color-navy-dark: #E4DDD3;     /* Ivory Dark for contrast/dropdowns/footers */
+  --color-navy: var(--background);
+  --color-navy-light: var(--panel-bg);
+  --color-navy-dark: var(--panel-contrast);
   --color-sunset: #1E3A8A;        /* Luxurious Royal Blue Accent */
   --color-sunset-dark: #0F172A;   /* Deep Navy Accent */
   --color-gold: #C0C0C0;          /* Silver Accent */
   --color-gold-dark: #94A3B8;     /* Darker Silver/Steel Accent */
-  --color-pink: #F8F6F1;          /* Soft Ivory White */
-  --color-pink-soft: #E4DDD3;     /* Warm cream soft */
-  --color-cream: #0F172A;         /* Deep Navy (default body text) */
-  --color-cream-dark: #090D1A;    /* Even deeper Navy for bold headings */
+  --color-pink: var(--background);
+  --color-pink-soft: var(--panel-contrast);
+  --color-cream: var(--text-primary);
+  --color-cream-dark: var(--text-secondary);
   --font-display: "Playfair Display", Georgia, serif;
   --font-body: "Inter", system-ui, sans-serif;
 }
@@ -27,24 +103,43 @@
   }
 
   ::selection {
-    @apply bg-blue-900/20 text-[#0F172A];
+    background-color: var(--selection-bg);
+    color: var(--selection-text);
+  }
+
+  /* Smooth transition for theme colors */
+  body, .glass, .glass-strong, .glass-card, header, footer, nav, input, select, textarea, button {
+    transition: background-color 0.4s ease, border-color 0.4s ease, color 0.4s ease, box-shadow 0.4s ease, background-image 0.4s ease;
   }
 }
 
 @utility glass {
-  @apply bg-white/70 backdrop-blur-xl border border-[#C0C0C0]/20 shadow-xl;
+  background-color: var(--glass-bg);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--glass-border);
+  @apply shadow-xl;
 }
 
 @utility glass-strong {
-  @apply bg-white/85 backdrop-blur-2xl border border-[#C0C0C0]/25 shadow-2xl;
+  background-color: var(--glass-bg-strong);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--glass-border-strong);
+  @apply shadow-2xl;
 }
 
 @utility glass-card {
-  @apply bg-gradient-to-br from-white/80 to-white/50 backdrop-blur-xl border border-[#C0C0C0]/20 rounded-2xl shadow-lg hover:shadow-xl hover:border-[#1E3A8A]/30 transition-all duration-300;
+  background: linear-gradient(to bottom right, var(--glass-card-from), var(--glass-card-to));
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--glass-border);
+  @apply rounded-2xl shadow-lg hover:shadow-xl hover:border-[#1E3A8A]/30 transition-all duration-300;
 }
 
 @utility text-gradient {
-  @apply bg-gradient-to-r from-[#0F172A] via-[#1E3A8A] to-[#94A3B8] bg-clip-text text-transparent;
+  background-image: linear-gradient(to right, var(--text-grad-1), var(--text-grad-2), var(--text-grad-3));
+  @apply bg-clip-text text-transparent;
 }
 
 @utility btn-primary {
@@ -55,15 +150,25 @@
 }
 
 @utility btn-secondary {
+  background-color: var(--btn-sec-bg);
+  border: 1px solid var(--btn-sec-border);
+  color: var(--btn-sec-text);
   @apply inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full font-semibold
-    bg-white/70 backdrop-blur-xl border border-[#1E3A8A]/20 text-[#1E3A8A]
-    hover:bg-[#F1EDE4] hover:border-[#1E3A8A]/40 transition-all duration-300 hover:-translate-y-0.5;
+    backdrop-blur-xl transition-all duration-300 hover:-translate-y-0.5;
+  &:hover {
+    background-color: var(--btn-sec-hover-bg);
+    border-color: var(--btn-sec-hover-border);
+  }
 }
 
 @utility input-field {
-  @apply w-full px-4 py-3 rounded-xl bg-white/70 border border-[#0F172A]/20 text-[#0F172A]
-    placeholder:text-[#0F172A]/50 focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/50
-    focus:border-[#1E3A8A]/50 transition-all;
+  background-color: var(--input-bg);
+  border: 1px solid var(--input-border);
+  color: var(--text-primary);
+  @apply w-full px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/50 focus:border-[#1E3A8A]/50 transition-all;
+  &::placeholder {
+    color: var(--text-placeholder);
+  }
 }
 
 @utility section-title {
@@ -72,17 +177,17 @@
 }
 
 @utility text-navy {
-  color: #0F172A !important;
+  color: var(--text-primary) !important;
 }
 
 .hero-gradient {
   background: linear-gradient(
     160deg,
-    #F8F6F1 0%,
-    #F1EDE4 40%,
-    #E4DDD3 70%,
-    rgba(192, 192, 192, 0.15) 90%,
-    rgba(15, 23, 42, 0.05) 100%
+    var(--hero-grad-1) 0%,
+    var(--hero-grad-2) 40%,
+    var(--hero-grad-3) 70%,
+    var(--hero-grad-4) 90%,
+    var(--hero-grad-5) 100%
   );
 }
 

@@ -45,6 +45,25 @@ export default function App() {
   const [confirmState, setConfirmState] = useState(null);
   const [isMobile, setIsMobile] = useState(false);
 
+  const [theme, setTheme] = useState(() => {
+    const saved = localStorage.getItem('theme');
+    return saved || 'light';
+  });
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (theme === 'dark') {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'light' ? 'dark' : 'light');
+  };
+
   const [menuCategories, setMenuCategories] = useState(() => {
     const stored = localStorage.getItem('rb_menu_categories');
     if (stored) {
@@ -298,6 +317,8 @@ export default function App() {
               onOpenOrders={() => setIsOrdersOpen(true)}
               onSelectCategory={handleSelectCategory}
               onItemClick={setSelectedFoodItem}
+              theme={theme}
+              toggleTheme={toggleTheme}
             />
             
             <Outlet />
