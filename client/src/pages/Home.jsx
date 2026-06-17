@@ -106,21 +106,22 @@ export default function Home() {
         </form>
       </section>
 
-      {/* Tagline Section */}
-      <section className="py-20 text-center max-w-4xl mx-auto px-4">
-        <p className="text-sunset uppercase tracking-[0.3em] text-xs font-semibold mb-4">Royal Grand Resort</p>
-        <h2 className="font-display text-4xl sm:text-5xl font-bold text-gradient mb-6 leading-tight">
-          Where Timeless Heritage Meets Contemporary Luxury
-        </h2>
-        <p className="text-cream/75 text-sm sm:text-base leading-relaxed max-w-2xl mx-auto">
-          Enveloped by pristine cliffside shorelines and lush tropical gardens, Royal Grand stands as a beacon of 5-star hospitality. Relax in architectural marvels, restore balance in our spa, and embark on gourmet culinary adventures.
-        </p>
-      </section>
-
       {/* Featured Rooms Showcase */}
-      <section className="py-16 bg-navy-light/10 border-t border-white/5">
+      <section className="py-20 bg-navy-light/10 border-t border-white/5">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-end mb-12">
+          
+          {/* Tagline Intro */}
+          <div className="text-center max-w-4xl mx-auto mb-20">
+            <p className="text-sunset uppercase tracking-[0.3em] text-xs font-semibold mb-4">Royal Grand Resort</p>
+            <h2 className="font-display text-4xl sm:text-5xl font-bold text-gradient mb-6 leading-tight">
+              Where Timeless Heritage Meets Contemporary Luxury
+            </h2>
+            <p className="text-cream/75 text-sm sm:text-base leading-relaxed max-w-2xl mx-auto">
+              Enveloped by pristine cliffside shorelines and lush tropical gardens, Royal Grand stands as a beacon of 5-star hospitality. Relax in architectural marvels, restore balance in our spa, and embark on gourmet culinary adventures.
+            </p>
+          </div>
+
+          <div className="flex justify-between items-end mb-12 border-t border-white/5 pt-12">
             <div className="text-left">
               <p className="text-sunset uppercase tracking-widest text-xs font-semibold mb-2">Accommodations</p>
               <h2 className="font-display text-3xl sm:text-4xl font-bold text-cream">Luxury Stay Collection</h2>

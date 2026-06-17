@@ -43,7 +43,7 @@ const hotelSlides = [
     id: 5,
     title: "Majestic Resort Shorelines",
     subtitle: "Experience an elite coastal getaway nestled in pristine clifftop tropical gardens.",
-    image: "https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=1600&q=80",
+    image: "https://images.unsplash.com/photo-1564507592333-c60657eea523?auto=format&fit=crop&w=1600&q=80",
     tag: "Resort Exterior",
     rating: "5.0",
     link: "/rooms"
