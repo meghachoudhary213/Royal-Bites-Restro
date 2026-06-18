@@ -121,12 +121,25 @@ export default function EventsPage() {
     }
 
     // Past date check
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const selectedDate = new Date(eventForm.eventDate);
-    if (selectedDate < today) {
-      showError('Cannot book event dates in the past.');
-      return;
+    const dateParts = eventForm.eventDate.split('-');
+    if (dateParts.length === 3) {
+      const bookingYear = parseInt(dateParts[0], 10);
+      const bookingMonth = parseInt(dateParts[1], 10);
+      const bookingDay = parseInt(dateParts[2], 10);
+
+      const today = new Date();
+      const todayYear = today.getFullYear();
+      const todayMonth = today.getMonth() + 1;
+      const todayDay = today.getDate();
+
+      if (
+        bookingYear < todayYear ||
+        (bookingYear === todayYear && bookingMonth < todayMonth) ||
+        (bookingYear === todayYear && bookingMonth === todayMonth && bookingDay < todayDay)
+      ) {
+        showError('Cannot book event dates in the past.');
+        return;
+      }
     }
 
     // Guest count check

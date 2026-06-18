@@ -33,11 +33,25 @@ const createSpaBooking = async (req, res) => {
       return res.status(400).json({ success: false, message: 'All required booking fields must be filled.' });
     }
 
-    // Validate that appointment date is not in the past
+    // Validate that appointment date is not in the past (using local date components to avoid UTC timezone shift)
+    const dateParts = appointmentDate.split('-');
+    if (dateParts.length !== 3) {
+      return res.status(400).json({ success: false, message: 'Invalid date format. Expected YYYY-MM-DD.' });
+    }
+    const bookingYear = parseInt(dateParts[0], 10);
+    const bookingMonth = parseInt(dateParts[1], 10);
+    const bookingDay = parseInt(dateParts[2], 10);
+
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const bookingDate = new Date(appointmentDate);
-    if (bookingDate < today) {
+    const todayYear = today.getFullYear();
+    const todayMonth = today.getMonth() + 1;
+    const todayDay = today.getDate();
+
+    if (
+      bookingYear < todayYear ||
+      (bookingYear === todayYear && bookingMonth < todayMonth) ||
+      (bookingYear === todayYear && bookingMonth === todayMonth && bookingDay < todayDay)
+    ) {
       return res.status(400).json({ success: false, message: 'Cannot book appointments in the past.' });
     }
 
@@ -129,11 +143,25 @@ const updateSpaBookingStatus = async (req, res) => {
 
     if (status === 'Rescheduled') {
       if (appointmentDate) {
-        // Validate date
+        // Validate date (using local date components to avoid UTC timezone shift)
+        const dateParts = appointmentDate.split('-');
+        if (dateParts.length !== 3) {
+          return res.status(400).json({ success: false, message: 'Invalid date format. Expected YYYY-MM-DD.' });
+        }
+        const bookingYear = parseInt(dateParts[0], 10);
+        const bookingMonth = parseInt(dateParts[1], 10);
+        const bookingDay = parseInt(dateParts[2], 10);
+
         const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const bookingDate = new Date(appointmentDate);
-        if (bookingDate < today) {
+        const todayYear = today.getFullYear();
+        const todayMonth = today.getMonth() + 1;
+        const todayDay = today.getDate();
+
+        if (
+          bookingYear < todayYear ||
+          (bookingYear === todayYear && bookingMonth < todayMonth) ||
+          (bookingYear === todayYear && bookingMonth === todayMonth && bookingDay < todayDay)
+        ) {
           return res.status(400).json({ success: false, message: 'Cannot reschedule appointments to a past date.' });
         }
         booking.appointmentDate = appointmentDate;
