@@ -122,8 +122,8 @@ export default function BookingPage() {
             onClick={() => handleTabChange('room')}
             className={`flex-1 py-3 text-xs sm:text-sm font-bold uppercase tracking-wider rounded-xl transition-all cursor-pointer border-0 ${
               activeTab === 'room'
-                ? 'bg-gradient-to-r from-sunset to-gold-dark text-cream shadow-md'
-                : 'text-cream/60 hover:text-cream bg-transparent'
+                ? 'bg-sunset text-white shadow-md'
+                : 'text-cream/70 hover:text-cream bg-transparent'
             }`}
           >
             Book A Room
@@ -132,8 +132,8 @@ export default function BookingPage() {
             onClick={() => handleTabChange('table')}
             className={`flex-1 py-3 text-xs sm:text-sm font-bold uppercase tracking-wider rounded-xl transition-all cursor-pointer border-0 ${
               activeTab === 'table'
-                ? 'bg-gradient-to-r from-sunset to-gold-dark text-cream shadow-md'
-                : 'text-cream/60 hover:text-cream bg-transparent'
+                ? 'bg-sunset text-white shadow-md'
+                : 'text-cream/70 hover:text-cream bg-transparent'
             }`}
           >
             Book A Table

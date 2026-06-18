@@ -111,8 +111,8 @@ export default function MenuPage({
                       onClick={() => setActiveCategory(cat.id)}
                       className={`w-full text-left px-5 py-3.5 rounded-2xl text-xs font-bold transition-all border duration-300 cursor-pointer ${
                         isActive
-                          ? 'bg-gradient-to-r from-sunset/20 to-gold/15 border-sunset text-gold shadow-[0_0_15px_rgba(242,100,25,0.25)]'
-                          : 'bg-white/5 border-white/5 text-cream/70 hover:text-cream hover:bg-white/10 hover:border-sunset/35 hover:shadow-[0_0_12px_rgba(242,100,25,0.15)]'
+                          ? 'bg-sunset border-sunset text-white shadow-md'
+                          : 'bg-white/5 border-cream/10 text-cream/70 hover:text-cream hover:bg-white/10 hover:border-sunset/50'
                       }`}
                     >
                       {cat.name}
@@ -132,8 +132,8 @@ export default function MenuPage({
                     onClick={() => setActiveCategory(cat.id)}
                     className={`whitespace-nowrap px-4 py-2.5 rounded-full text-xs font-bold transition-all border duration-300 cursor-pointer ${
                       isActive
-                        ? 'bg-gradient-to-r from-sunset/20 to-gold/15 border-sunset text-gold shadow-[0_0_10px_rgba(242,100,25,0.2)]'
-                        : 'bg-white/5 border-white/10 text-cream/75 hover:text-cream hover:border-sunset/35'
+                        ? 'bg-sunset border-sunset text-white shadow-md'
+                        : 'bg-white/5 border-cream/10 text-cream/75 hover:text-cream hover:border-sunset/50'
                     }`}
                   >
                     {cat.name}

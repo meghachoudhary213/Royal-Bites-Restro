@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { Menu, X, Crown, ShoppingBag, User, LogOut, History, ChevronDown, Sun, Moon } from 'lucide-react';
 
@@ -28,6 +28,7 @@ export default function Navbar({
 }) {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const location = useLocation();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
@@ -57,16 +58,23 @@ export default function Navbar({
           </Link>
 
           <div className="hidden lg:flex items-center gap-6">
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                to={link.href}
-                onClick={() => setMobileOpen(false)}
-                className="text-cream/80 hover:text-gold transition-colors text-sm font-medium tracking-wide"
-              >
-                {link.label}
-              </Link>
-            ))}
+            {navLinks.map((link) => {
+              const isActive = location.pathname === link.href;
+              return (
+                <Link
+                  key={link.href}
+                  to={link.href}
+                  onClick={() => setMobileOpen(false)}
+                  className={`transition-colors text-sm font-semibold tracking-wide ${
+                    isActive 
+                      ? 'text-sunset dark:text-gold font-bold' 
+                      : 'text-cream/80 hover:text-sunset dark:hover:text-gold'
+                  }`}
+                >
+                  {link.label}
+                </Link>
+              );
+            })}
             
 
             {/* Desktop Auth Section */}
@@ -110,7 +118,7 @@ export default function Navbar({
               <button
                 type="button"
                 onClick={onOpenAuth}
-                className="px-4 py-2 rounded-xl bg-white/10 hover:bg-sunset text-cream hover:text-navy transition-all duration-300 font-semibold text-xs border border-white/10 cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-white/10 hover:bg-sunset text-cream hover:text-white transition-all duration-300 font-semibold text-xs border border-cream/20 hover:border-sunset cursor-pointer"
               >
                 Login
               </button>
@@ -144,7 +152,7 @@ export default function Navbar({
             {/* Book Now Button */}
             <Link
               to="/booking"
-              className="px-4 py-2 rounded-xl bg-gradient-to-r from-sunset to-sunset-dark text-cream hover:opacity-90 font-bold text-xs transition-all duration-300 shadow-md shadow-sunset/25 hover:shadow-sunset/40 hover:-translate-y-0.5"
+              className="px-4 py-2 rounded-xl bg-gradient-to-r from-sunset to-sunset-dark text-white hover:opacity-90 font-bold text-xs transition-all duration-300 shadow-md shadow-sunset/25 hover:shadow-sunset/40 hover:-translate-y-0.5"
             >
               Book Now
             </Link>
@@ -189,16 +197,23 @@ export default function Navbar({
 
         {mobileOpen && (
           <div className="lg:hidden pb-4 border-t border-white/10 mt-2 pt-4 space-y-3">
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                to={link.href}
-                onClick={() => setMobileOpen(false)}
-                className="block py-2 text-cream/90 hover:text-gold transition-colors font-medium"
-              >
-                {link.label}
-              </Link>
-            ))}
+            {navLinks.map((link) => {
+              const isActive = location.pathname === link.href;
+              return (
+                <Link
+                  key={link.href}
+                  to={link.href}
+                  onClick={() => setMobileOpen(false)}
+                  className={`block py-2 transition-colors font-semibold ${
+                    isActive 
+                      ? 'text-sunset dark:text-gold font-bold' 
+                      : 'text-cream/90 hover:text-sunset dark:hover:text-gold'
+                  }`}
+                >
+                  {link.label}
+                </Link>
+              );
+            })}
 
 
             {/* Mobile Auth options */}
@@ -241,7 +256,7 @@ export default function Navbar({
                   setMobileOpen(false);
                   onOpenAuth();
                 }}
-                className="w-full text-center block py-2.5 rounded-xl bg-white/10 hover:bg-sunset text-cream hover:text-navy transition-all duration-300 font-semibold text-xs mt-3 cursor-pointer"
+                className="w-full text-center block py-2.5 rounded-xl bg-white/10 hover:bg-sunset text-cream hover:text-white transition-all duration-300 font-semibold text-xs mt-3 cursor-pointer border border-cream/20 hover:border-sunset"
               >
                 Login / Register
               </button>
@@ -251,7 +266,7 @@ export default function Navbar({
             <Link
               to="/booking"
               onClick={() => setMobileOpen(false)}
-              className="block w-full text-center py-2.5 rounded-xl bg-gradient-to-r from-sunset to-sunset-dark text-cream font-bold text-xs mt-3 shadow-lg"
+              className="block w-full text-center py-2.5 rounded-xl bg-gradient-to-r from-sunset to-sunset-dark text-white font-bold text-xs mt-3 shadow-lg"
             >
               Book Now
             </Link>

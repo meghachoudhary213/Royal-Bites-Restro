@@ -528,11 +528,11 @@ export default function DashboardPage({ currentUser, onUpdateProfile, onLogout, 
                 onClick={() => setSearchParams({ tab: tab.id })}
                 className={`w-full text-left px-5 py-3.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-3 cursor-pointer border-0 ${
                   activeTab === tab.id
-                    ? 'bg-gradient-to-r from-sunset/20 to-gold/10 text-gold border-l-4 border-sunset md:translate-x-1'
-                    : 'glass text-cream/70 hover:bg-white/5'
+                    ? 'bg-sunset text-white border-l-4 border-sunset-dark md:translate-x-1 shadow-md'
+                    : 'glass text-cream/70 hover:bg-white/5 hover:text-cream'
                 }`}
               >
-                <tab.icon className={`w-4 h-4 ${activeTab === tab.id ? 'text-sunset' : 'text-cream/40'}`} />
+                <tab.icon className={`w-4 h-4 ${activeTab === tab.id ? 'text-white' : 'text-cream/40'}`} />
                 {tab.label}
               </button>
             ))}

@@ -5,7 +5,9 @@
   --panel-bg: #F1EDE4;            /* Light Ivory background for sections/panels */
   --panel-contrast: #E4DDD3;      /* Ivory Dark for contrast/dropdowns/footers */
   --text-primary: #0F172A;        /* Deep Navy (default body text) */
-  --text-secondary: #090D1A;      /* Even deeper Navy for bold headings */
+  --text-secondary: #475569;      /* Strong Slate-Gray for secondary text */
+  --gold-accent: #8E7047;         /* Elegant bronze/gold accent for contrast */
+  --gold-accent-dark: #6B5230;    /* Dark bronze accent */
   
   --glass-bg: rgba(255, 255, 255, 0.7);
   --glass-bg-strong: rgba(255, 255, 255, 0.85);
@@ -32,7 +34,7 @@
 
   --text-grad-1: #0F172A;
   --text-grad-2: #1E3A8A;
-  --text-grad-3: #94A3B8;
+  --text-grad-3: #475569;         /* High-contrast gradient end in light mode */
 
   --selection-bg: rgba(30, 58, 138, 0.2);
   --selection-text: #0F172A;
@@ -42,8 +44,10 @@
   --background: #0F172A;          /* Midnight Navy / Charcoal background */
   --panel-bg: #1E293B;            /* Dark glass/panel */
   --panel-contrast: #090E1A;      /* Even deeper navy/black panel */
-  --text-primary: #F8F6F1;        /* Soft Ivory text */
-  --text-secondary: #FAF9F6;      /* Bright ivory/white headings */
+  --text-primary: #F8FAFC;        /* Soft White / Slate 50 text */
+  --text-secondary: #CBD5E1;      /* Soft light-gray Slate 300 secondary text */
+  --gold-accent: #C0C0C0;         /* Silver Accent */
+  --gold-accent-dark: #94A3B8;    /* Darker Silver/Steel Accent */
   
   --glass-bg: rgba(30, 41, 59, 0.7);      /* #1E293B dark glass */
   --glass-bg-strong: rgba(30, 41, 59, 0.85);
@@ -54,7 +58,7 @@
 
   --btn-sec-bg: rgba(30, 41, 59, 0.7);
   --btn-sec-border: rgba(30, 58, 138, 0.3);
-  --btn-sec-text: #F8F6F1;
+  --btn-sec-text: #F8FAFC;
   --btn-sec-hover-bg: #1E293B;
   --btn-sec-hover-border: rgba(30, 58, 138, 0.5);
 
@@ -68,12 +72,12 @@
   --hero-grad-4: rgba(192, 192, 192, 0.05);
   --hero-grad-5: rgba(15, 23, 42, 0.2);
 
-  --text-grad-1: #F8F6F1;
+  --text-grad-1: #F8FAFC;
   --text-grad-2: #1E3A8A;
   --text-grad-3: #C0C0C0;
 
   --selection-bg: rgba(248, 246, 241, 0.2);
-  --selection-text: #F8F6F1;
+  --selection-text: #F8FAFC;
 }
 
 @theme {
@@ -82,8 +86,8 @@
   --color-navy-dark: var(--panel-contrast);
   --color-sunset: #1E3A8A;        /* Luxurious Royal Blue Accent */
   --color-sunset-dark: #0F172A;   /* Deep Navy Accent */
-  --color-gold: #C0C0C0;          /* Silver Accent */
-  --color-gold-dark: #94A3B8;     /* Darker Silver/Steel Accent */
+  --color-gold: var(--gold-accent); /* Dynamic Accent Gold/Silver */
+  --color-gold-dark: var(--gold-accent-dark);
   --color-pink: var(--background);
   --color-pink-soft: var(--panel-contrast);
   --color-cream: var(--text-primary);
@@ -144,7 +148,7 @@
 
 @utility btn-primary {
   @apply inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full font-semibold
-    bg-gradient-to-r from-[#1E3A8A] to-[#0F172A] text-[#F8F6F1]
+    bg-gradient-to-r from-[#1E3A8A] to-[#0F172A] text-white
     hover:from-[#C0C0C0] hover:to-[#94A3B8] hover:text-[#0F172A] transition-all duration-300
     shadow-lg shadow-blue-950/20 hover:shadow-slate-900/30 hover:-translate-y-0.5;
 }
@@ -308,4 +312,45 @@
 .tilt-container {
   transform-style: preserve-3d;
   will-change: transform;
+}
+
+/* Global opacity override selectors to ensure strong contrast in Light/Dark Mode */
+html:not(.dark) {
+  .text-cream\/95 { color: #0F172A !important; }
+  .text-cream\/90 { color: #1E293B !important; }
+  .text-cream\/85 { color: #1E293B !important; }
+  .text-cream\/80 { color: #334155 !important; }
+  .text-cream\/75 { color: #334155 !important; }
+  .text-cream\/70 { color: #475569 !important; }
+  .text-cream\/65 { color: #475569 !important; }
+  .text-cream\/60 { color: #475569 !important; }
+  .text-cream\/55 { color: #475569 !important; }
+  .text-cream\/50 { color: #475569 !important; }
+  .text-cream\/45 { color: #576579 !important; }
+  .text-cream\/40 { color: #576579 !important; }
+  .text-cream\/35 { color: #64748B !important; }
+  .text-cream\/30 { color: #64748B !important; }
+  .text-cream\/25 { color: #64748B !important; }
+  .text-cream\/20 { color: #64748B !important; }
+  .text-cream\/15 { color: #64748B !important; }
+  .text-cream\/10 { color: #64748B !important; }
+}
+
+html.dark {
+  .text-cream\/95 { color: #FAF9F6 !important; }
+  .text-cream\/90 { color: #F1F5F9 !important; }
+  .text-cream\/85 { color: #F1F5F9 !important; }
+  .text-cream\/80 { color: #E2E8F0 !important; }
+  .text-cream\/75 { color: #E2E8F0 !important; }
+  .text-cream\/70 { color: #CBD5E1 !important; }
+  .text-cream\/65 { color: #CBD5E1 !important; }
+  .text-cream\/60 { color: #CBD5E1 !important; }
+  .text-cream\/55 { color: #CBD5E1 !important; }
+  .text-cream\/50 { color: #CBD5E1 !important; }
+  .text-cream\/45 { color: #94A3B8 !important; }
+  .text-cream\/40 { color: #94A3B8 !important; }
+  .text-cream\/35 { color: #94A3B8 !important; }
+  .text-cream\/30 { color: #64748B !important; }
+  .text-cream\/25 { color: #64748B !important; }
+  .text-cream\/20 { color: #64748B !important; }
 }
