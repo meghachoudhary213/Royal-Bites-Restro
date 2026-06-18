@@ -9,6 +9,10 @@ const connectDB = async () => {
     // Seed default physical rooms if they don't exist
     const { seedRooms } = require('../services/roomSeeder');
     await seedRooms();
+
+    // Seed default spa services if they don't exist
+    const { seedSpaServices } = require('../services/spaSeeder');
+    await seedSpaServices();
   } catch (error) {
     console.error(`MongoDB Connection Error: ${error.message}`);
     // Do not exit process so that the hybrid local fallback architecture can function

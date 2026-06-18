@@ -79,6 +79,7 @@ export default function AdminDashboard({ menuCategories, onUpdateMenu }) {
   const [loading, setLoading] = useState(false);
   const [hotelBookings, setHotelBookings] = useState([]);
   const [roomsList, setRoomsList] = useState([]);
+  const [spaBookings, setSpaBookings] = useState([]);
 
   // Local storage lists
   const [orders, setOrders] = useState([]);
@@ -128,6 +129,11 @@ export default function AdminDashboard({ menuCategories, onUpdateMenu }) {
   // Reviews filters
   const [reviewStatusFilter, setReviewStatusFilter] = useState('all');
   const [reviewRatingFilter, setReviewRatingFilter] = useState('all');
+  
+  // Spa Rescheduling State
+  const [reschedulingId, setReschedulingId] = useState(null);
+  const [reschedDate, setReschedDate] = useState('');
+  const [reschedTime, setReschedTime] = useState('');
 
   const handleExportOrders = () => {
     const ordersToExport = orders || [];
@@ -302,8 +308,9 @@ export default function AdminDashboard({ menuCategories, onUpdateMenu }) {
     let couponsData = null;
     let roomsData = null;
     let hotelBookingsData = null;
+    let spaBookingsData = null;
     try {
-      const [bookingsRes, inquiriesRes, ordersRes, reviewsRes, couponsRes, roomsRes, hotelBookingsRes] = await Promise.all([
+      const [bookingsRes, inquiriesRes, ordersRes, reviewsRes, couponsRes, roomsRes, hotelBookingsRes, spaBookingsRes] = await Promise.all([
         api.getBookings().catch(err => {
           console.warn('Failed to fetch bookings from MongoDB, falling back to localStorage:', err.message);
           return { success: false, data: null };
@@ -331,6 +338,10 @@ export default function AdminDashboard({ menuCategories, onUpdateMenu }) {
         api.getRoomBookings().catch(err => {
           console.warn('Failed to fetch hotel bookings from MongoDB, falling back to localStorage:', err.message);
           return { success: false, data: null };
+        }),
+        api.getSpaBookings().catch(err => {
+          console.warn('Failed to fetch spa bookings from MongoDB, falling back to localStorage:', err.message);
+          return { success: false, data: null };
         })
       ]);
       if (bookingsRes && bookingsRes.success) {
@@ -353,6 +364,9 @@ export default function AdminDashboard({ menuCategories, onUpdateMenu }) {
       }
       if (hotelBookingsRes && hotelBookingsRes.success) {
         hotelBookingsData = hotelBookingsRes.data;
+      }
+      if (spaBookingsRes && spaBookingsRes.success) {
+        spaBookingsData = spaBookingsRes.data;
       }
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
@@ -393,6 +407,10 @@ export default function AdminDashboard({ menuCategories, onUpdateMenu }) {
       // Setup room bookings with fallback
       const localRoomBookings = JSON.parse(localStorage.getItem('rb_room_bookings') || '[]');
       setHotelBookings(hotelBookingsData !== null ? hotelBookingsData : localRoomBookings);
+
+      // Setup spa bookings with fallback
+      const localSpaBookings = JSON.parse(localStorage.getItem('rb_spa_bookings') || '[]');
+      setSpaBookings(spaBookingsData !== null ? spaBookingsData : localSpaBookings);
 
       setCustomers(JSON.parse(localStorage.getItem('registeredUsers') || '[]'));
       
@@ -692,6 +710,58 @@ export default function AdminDashboard({ menuCategories, onUpdateMenu }) {
     }
     fetchData();
     resolveLoading(loadingToastId, 'success', `Room status updated to ${status}`);
+  };
+
+  const handleUpdateSpaBookingStatus = async (id, status, appointmentDate = null, appointmentTime = null) => {
+    const loadingToastId = showLoading('Updating appointment...');
+    try {
+      const payload = { status };
+      if (status === 'Rescheduled') {
+        if (appointmentDate) payload.appointmentDate = appointmentDate;
+        if (appointmentTime) payload.appointmentTime = appointmentTime;
+      }
+      
+      const res = await api.updateSpaBookingStatus(id, payload);
+      if (res.success) {
+        console.log('Spa appointment status updated in MongoDB');
+      }
+    } catch (apiError) {
+      console.warn('MongoDB spa booking status update failed, using localStorage fallback:', apiError.message);
+      const localBookings = JSON.parse(localStorage.getItem('rb_spa_bookings') || '[]');
+      const updatedBookings = localBookings.map(b => {
+        if (b._id === id || b.id === id || b.appointmentId === id) {
+          const updated = { ...b, status };
+          if (status === 'Rescheduled') {
+            if (appointmentDate) updated.appointmentDate = appointmentDate;
+            if (appointmentTime) updated.appointmentTime = appointmentTime;
+          }
+          return updated;
+        }
+        return b;
+      });
+      localStorage.setItem('rb_spa_bookings', JSON.stringify(updatedBookings));
+    }
+    fetchData();
+    resolveLoading(loadingToastId, 'success', `Appointment marked as ${status}`);
+  };
+
+  const handleDeleteSpaBooking = (id) => {
+    showConfirm('Delete this spa appointment permanently?', async () => {
+      try {
+        const res = await api.deleteSpaBooking(id);
+        if (res.success) {
+          console.log('Spa appointment deleted from MongoDB');
+        }
+      } catch (apiError) {
+        console.warn('MongoDB spa appointment deletion failed, using localStorage fallback:', apiError.message);
+      }
+      const localBookings = JSON.parse(localStorage.getItem('rb_spa_bookings') || '[]');
+      const updatedBookings = localBookings.filter(b => b._id !== id && b.id !== id && b.appointmentId !== id);
+      localStorage.setItem('rb_spa_bookings', JSON.stringify(updatedBookings));
+      
+      fetchData();
+      showSuccess('Spa appointment deleted successfully.');
+    });
   };
 
   // INQUIRY CONTROLS
@@ -1459,6 +1529,7 @@ export default function AdminDashboard({ menuCategories, onUpdateMenu }) {
             { id: 'bookings', label: 'Reservations', icon: Calendar },
             { id: 'inquiries', label: 'Queries', icon: MessageSquare },
             { id: 'hotel', label: 'Hotel Management', icon: Bed },
+            { id: 'spa', label: 'Spa Management', icon: Sparkles },
           ].map(({ id, label, icon: Icon }) => (
             <button
               key={id}
@@ -3264,6 +3335,222 @@ export default function AdminDashboard({ menuCategories, onUpdateMenu }) {
               </div>
             </div>
 
+          </div>
+        )}
+
+        {/* SPA MANAGEMENT TAB */}
+        {tab === 'spa' && (
+          <div className="space-y-8">
+            {/* KPI Metrics */}
+            <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-4">
+              {[
+                { label: 'Total Appointments', value: spaBookings.length, icon: Calendar, color: 'text-cream' },
+                { label: 'Pending Bookings', value: spaBookings.filter(b => b.status === 'Pending').length, icon: Calendar, color: 'text-yellow-300' },
+                { label: 'Confirmed Bookings', value: spaBookings.filter(b => b.status === 'Confirmed').length, icon: Calendar, color: 'text-green-300' },
+                { label: 'Completed Bookings', value: spaBookings.filter(b => b.status === 'Completed').length, icon: Calendar, color: 'text-blue-300' },
+                { label: 'Spa Revenue', value: `₹${spaBookings.filter(b => b.status === 'Completed').reduce((sum, b) => sum + (b.totalAmount || 0), 0).toLocaleString()}`, icon: DollarSign, color: 'text-gold' }
+              ].map((stat, idx) => (
+                <div key={idx} className="glass-card p-5 border border-white/10 flex items-center justify-between">
+                  <div>
+                    <p className="text-cream/50 text-xs uppercase tracking-wider">{stat.label}</p>
+                    <p className={`text-2xl font-bold mt-1 font-display ${stat.color}`}>{stat.value}</p>
+                  </div>
+                  <stat.icon className="w-8 h-8 text-sunset/30" />
+                </div>
+              ))}
+            </div>
+
+            {/* Appointments Management Panel */}
+            <div className="glass p-6 rounded-3xl border border-white/10 space-y-4">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-gold pb-2 border-b border-white/5">
+                Spa Appointment Registry ({spaBookings.length})
+              </h3>
+              
+              <div className="space-y-4">
+                {spaBookings.length === 0 ? (
+                  <p className="text-xs text-cream/40 text-center py-8">No spa appointments registered yet.</p>
+                ) : (
+                  spaBookings.map((b) => {
+                    const bookingId = b._id || b.id;
+                    const isRescheduling = reschedulingId === bookingId;
+                    
+                    return (
+                      <div key={bookingId} className="glass p-5 rounded-2xl border border-white/5 space-y-3">
+                        <div className="flex justify-between items-start flex-wrap gap-2">
+                          <div>
+                            <div className="flex items-center gap-2.5">
+                              <h4 className="font-semibold text-cream text-sm">{b.guestName}</h4>
+                              <span className={`px-2 py-0.5 rounded text-[8px] font-bold uppercase border ${
+                                b.status === 'Pending' ? 'bg-yellow-500/10 text-yellow-300 border-yellow-500/20 animate-pulse' :
+                                b.status === 'Confirmed' ? 'bg-green-500/10 text-green-300 border-green-500/20' :
+                                b.status === 'Rescheduled' ? 'bg-purple-500/10 text-purple-300 border-purple-500/20' :
+                                b.status === 'Completed' ? 'bg-blue-500/10 text-blue-300 border-blue-500/20' :
+                                'bg-red-500/10 text-red-400 border-red-500/20'
+                              }`}>
+                                {b.status}
+                              </span>
+                            </div>
+                            <span className="text-[10px] text-cream/40">{b.email} · {b.phone}</span>
+                          </div>
+                          
+                          <div className="text-right flex flex-col items-end">
+                            <span className="text-xs font-mono text-gold font-bold">{b.appointmentId}</span>
+                            <span className="text-[10px] text-cream/35">Requested {formatDate(b.createdAt)}</span>
+                          </div>
+                        </div>
+
+                        <div className="grid sm:grid-cols-3 gap-3 text-xs bg-white/5 p-3 rounded-xl">
+                          <div>
+                            <span className="block text-[8px] text-cream/30 uppercase">Treatment Therapy</span>
+                            <span className="font-semibold text-cream/90">{b.service}</span>
+                            <span className="block text-[10px] text-gold/80 font-semibold">Therapist: {b.therapistPreference === 'None' ? 'No Preference' : `${b.therapistPreference} Therapist`}</span>
+                          </div>
+                          
+                          <div>
+                            <span className="block text-[8px] text-cream/30 uppercase">Date & Scheduled Time</span>
+                            <span className="font-semibold text-cream/95">{b.appointmentDate} at {b.appointmentTime}</span>
+                          </div>
+
+                          <div>
+                            <span className="block text-[8px] text-cream/30 uppercase">Session Bill Total</span>
+                            <span className="font-bold text-gold">₹{(b.totalAmount || 0).toLocaleString()}</span>
+                          </div>
+                        </div>
+
+                        {b.specialRequests && (
+                          <p className="text-xs text-cream/60 italic leading-relaxed">&ldquo;{b.specialRequests}&rdquo;</p>
+                        )}
+
+                        {/* Inline Rescheduling Controls */}
+                        {isRescheduling && (
+                          <div className="p-3 bg-white/5 border border-white/10 rounded-2xl space-y-3 animate-in fade-in duration-200">
+                            <h5 className="text-[10px] font-bold text-gold uppercase tracking-wider">Set New Appointment Date & Time</h5>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-[9px] text-cream/50 mb-1">New Date</label>
+                                <input
+                                  type="date"
+                                  value={reschedDate}
+                                  onChange={(e) => setReschedDate(e.target.value)}
+                                  min={new Date().toISOString().split('T')[0]}
+                                  className="input-field py-1.5 text-xs bg-navy text-cream"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[9px] text-cream/50 mb-1">New Time</label>
+                                <input
+                                  type="time"
+                                  value={reschedTime}
+                                  onChange={(e) => setReschedTime(e.target.value)}
+                                  className="input-field py-1.5 text-xs bg-navy text-cream"
+                                />
+                              </div>
+                            </div>
+                            <div className="flex gap-2 justify-end text-[10px] pt-1">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setReschedulingId(null);
+                                  setReschedDate('');
+                                  setReschedTime('');
+                                }}
+                                className="px-3 py-1.5 border border-white/10 glass rounded-lg text-cream/70 cursor-pointer"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (!reschedDate || !reschedTime) {
+                                    showWarning('Please select both date and time.');
+                                    return;
+                                  }
+                                  handleUpdateSpaBookingStatus(bookingId, 'Rescheduled', reschedDate, reschedTime);
+                                  setReschedulingId(null);
+                                  setReschedDate('');
+                                  setReschedTime('');
+                                }}
+                                className="px-3 py-1.5 bg-gradient-to-r from-sunset to-gold text-navy font-bold rounded-lg cursor-pointer"
+                              >
+                                Confirm Reschedule
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="flex justify-between items-center pt-2 border-t border-white/5 text-[10px]">
+                          <span className="text-cream/30">Select appointment action:</span>
+                          
+                          <div className="flex gap-2 items-center">
+                            {b.status === 'Pending' && (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateSpaBookingStatus(bookingId, 'Confirmed')}
+                                  className="px-2.5 py-1 bg-green-600/20 hover:bg-green-600/30 text-green-300 border border-green-500/30 font-bold rounded text-[9px] transition-all cursor-pointer"
+                                >
+                                  Confirm
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateSpaBookingStatus(bookingId, 'Rejected')}
+                                  className="px-2.5 py-1 bg-red-600/20 hover:bg-red-600/30 text-red-300 border border-red-500/30 font-bold rounded text-[9px] transition-all cursor-pointer"
+                                >
+                                  Reject
+                                </button>
+                              </>
+                            )}
+
+                            {['Confirmed', 'Rescheduled'].includes(b.status) && (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateSpaBookingStatus(bookingId, 'Completed')}
+                                  className="px-2.5 py-1 bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 font-bold rounded text-[9px] transition-all cursor-pointer"
+                                >
+                                  Complete
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setReschedulingId(bookingId);
+                                    setReschedDate(b.appointmentDate);
+                                    setReschedTime(b.appointmentTime);
+                                  }}
+                                  className="px-2.5 py-1 bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/30 font-bold rounded text-[9px] transition-all cursor-pointer"
+                                >
+                                  Reschedule
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateSpaBookingStatus(bookingId, 'Cancelled')}
+                                  className="px-2.5 py-1 bg-red-600/20 hover:bg-red-600/30 text-red-300 border border-red-500/30 font-bold rounded text-[9px] transition-all cursor-pointer"
+                                >
+                                  Cancel
+                                </button>
+                              </>
+                            )}
+
+                            {['Completed', 'Cancelled', 'Rejected'].includes(b.status) && (
+                              <span className="text-cream/40 italic font-normal">Session Ended ({b.status})</span>
+                            )}
+
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteSpaBooking(bookingId)}
+                              className="p-1 rounded bg-red-600/10 hover:bg-red-600/20 text-red-400 border border-red-500/20 ml-2 cursor-pointer"
+                              title="Delete permanently"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
           </div>
         )}
 

@@ -21,6 +21,7 @@ const inquiryRoutes = require('./routes/inquiries');
 const whatsappRoutes = require('./routes/whatsappRoutes');
 const roomRoutes = require('./routes/roomRoutes');
 const roomBookingRoutes = require('./routes/roomBookingRoutes');
+const spaRoutes = require('./routes/spaRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -77,6 +78,7 @@ app.use('/api/inquiries', inquiryRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
 app.use('/api/rooms', roomRoutes);
 app.use('/api/room-bookings', roomBookingRoutes);
+app.use('/api/spa', spaRoutes);
 
 app.listen(PORT, () => {
   console.log(`Royal Bites server running on port ${PORT}`);

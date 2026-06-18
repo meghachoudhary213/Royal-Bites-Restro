@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { spaServices } from '../data/hotel';
 import { Clock, Shield, Sparkles, CheckCircle } from 'lucide-react';
 import { showSuccess, showError } from '../utils/toast';
+import { api } from '../api/api';
 import Footer from '../components/Footer';
 
 export default function SpaPage() {
@@ -12,12 +13,33 @@ export default function SpaPage() {
     phone: '',
     date: '',
     time: '',
+    therapistPreference: 'None',
     specialRequests: ''
   });
   const [isBooked, setIsBooked] = useState(false);
+  const [confirmedBookingId, setConfirmedBookingId] = useState('');
+  const [services, setServices] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    
+    const fetchServices = async () => {
+      try {
+        const res = await api.getSpaServices();
+        if (res.success && res.data && res.data.length > 0) {
+          setServices(res.data);
+        } else {
+          setServices(spaServices);
+        }
+      } catch (err) {
+        console.warn('Failed to fetch spa services from backend, using local fallback:', err.message);
+        setServices(spaServices);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchServices();
   }, []);
 
   const handleOpenBooking = (service) => {
@@ -29,34 +51,79 @@ export default function SpaPage() {
       phone: currentUser?.phone || '',
       date: new Date().toISOString().split('T')[0],
       time: '10:00',
+      therapistPreference: 'None',
       specialRequests: ''
     });
     setIsBooked(false);
+    setConfirmedBookingId('');
   };
 
-  const handleBookingSubmit = (e) => {
+  const handleBookingSubmit = async (e) => {
     e.preventDefault();
     if (!spaForm.name || !spaForm.email || !spaForm.phone || !spaForm.date || !spaForm.time) {
       showError('Please fill in all required fields.');
       return;
     }
 
-    const newBooking = {
-      id: `SPA-${Date.now()}`,
-      serviceName: selectedService.name,
-      servicePrice: selectedService.price,
-      duration: selectedService.duration,
-      ...spaForm,
-      status: 'Inquired',
-      createdAt: new Date().toLocaleDateString()
+    // Past date validation
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const selectedDate = new Date(spaForm.date);
+    if (selectedDate < today) {
+      showError('Cannot book appointments in the past.');
+      return;
+    }
+
+    const payload = {
+      guestName: spaForm.name,
+      phone: spaForm.phone,
+      email: spaForm.email,
+      service: selectedService.name,
+      appointmentDate: spaForm.date,
+      appointmentTime: spaForm.time,
+      therapistPreference: spaForm.therapistPreference,
+      specialRequests: spaForm.specialRequests
     };
 
-    // Save spa bookings in localStorage
-    const localBookings = JSON.parse(localStorage.getItem('rb_spa_bookings') || '[]');
-    localStorage.setItem('rb_spa_bookings', JSON.stringify([newBooking, ...localBookings]));
+    let appointmentId = '';
+    try {
+      const res = await api.createSpaBooking(payload);
+      if (res.success) {
+        appointmentId = res.data.appointmentId;
+      }
+    } catch (apiError) {
+      console.warn('Backend spa booking failed, falling back to local storage simulation:', apiError.message);
+      appointmentId = `SPA-${Date.now()}`;
+      
+      // Sync in local storage
+      const localBooking = {
+        appointmentId,
+        guestName: spaForm.name,
+        phone: spaForm.phone,
+        email: spaForm.email,
+        service: selectedService.name,
+        appointmentDate: spaForm.date,
+        appointmentTime: spaForm.time,
+        therapistPreference: spaForm.therapistPreference,
+        specialRequests: spaForm.specialRequests,
+        status: 'Pending',
+        totalAmount: selectedService.price,
+        createdAt: new Date().toISOString()
+      };
+      const localBookings = JSON.parse(localStorage.getItem('rb_spa_bookings') || '[]');
+      localStorage.setItem('rb_spa_bookings', JSON.stringify([localBooking, ...localBookings]));
+    }
 
+    setConfirmedBookingId(appointmentId);
     setIsBooked(true);
-    showSuccess(`Spa inquiry confirmed for ${selectedService.name}!`);
+    showSuccess(`Spa appointment confirmed for ${selectedService.name}!`);
+
+    // Notify administrators / update tabs if listening
+    try {
+      const pendingAdminNotifs = JSON.parse(localStorage.getItem('rb_pending_admin_notifs') || '[]');
+      pendingAdminNotifs.push({ type: 'spa_booking', name: spaForm.name, time: Date.now() });
+      localStorage.setItem('rb_pending_admin_notifs', JSON.stringify(pendingAdminNotifs));
+    } catch (e) {}
   };
 
   return (
@@ -78,42 +145,48 @@ export default function SpaPage() {
         </div>
 
         {/* Spa Grid */}
-        <div className="grid sm:grid-cols-2 gap-8 mb-20">
-          {spaServices.map((service) => (
-            <div 
-              key={service.id} 
-              className="glass rounded-3xl overflow-hidden border border-white/10 flex flex-col sm:flex-row hover:border-white/20 transition-all duration-300 group"
-            >
-              {/* Image */}
-              <div className="relative w-full sm:w-48 h-48 sm:h-auto overflow-hidden shrink-0">
-                <img 
-                  src={service.image} 
-                  alt={service.name} 
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-              </div>
-
-              {/* Details */}
-              <div className="p-6 flex flex-col justify-between flex-1">
-                <div>
-                  <h3 className="font-display text-xl font-bold text-cream group-hover:text-gold transition-colors">{service.name}</h3>
-                  <div className="flex gap-4 my-2 text-xs text-cream/50">
-                    <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {service.duration}</span>
-                    <span className="text-gold font-semibold">₹{service.price.toLocaleString()}</span>
-                  </div>
-                  <p className="text-cream/60 text-xs sm:text-sm mt-2 leading-relaxed">{service.description}</p>
+        {loading ? (
+          <div className="text-center py-12">
+            <p className="text-sm text-cream/60">Loading sanctuary therapies...</p>
+          </div>
+        ) : (
+          <div className="grid sm:grid-cols-2 gap-8 mb-20">
+            {services.map((service) => (
+              <div 
+                key={service._id || service.id} 
+                className="glass rounded-3xl overflow-hidden border border-white/10 flex flex-col sm:flex-row hover:border-white/20 transition-all duration-300 group"
+              >
+                {/* Image */}
+                <div className="relative w-full sm:w-48 h-48 sm:h-auto overflow-hidden shrink-0">
+                  <img 
+                    src={service.image} 
+                    alt={service.name} 
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
                 </div>
 
-                <button
-                  onClick={() => handleOpenBooking(service)}
-                  className="mt-5 text-xs font-semibold text-sunset hover:text-gold flex items-center gap-1 transition-colors uppercase tracking-widest cursor-pointer border-0 bg-transparent self-start"
-                >
-                  Book Treatment &rarr;
-                </button>
+                {/* Details */}
+                <div className="p-6 flex flex-col justify-between flex-1">
+                  <div>
+                    <h3 className="font-display text-xl font-bold text-cream group-hover:text-gold transition-colors">{service.name}</h3>
+                    <div className="flex gap-4 my-2 text-xs text-cream/50">
+                      <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {service.duration}</span>
+                      <span className="text-gold font-semibold">₹{service.price.toLocaleString()}</span>
+                    </div>
+                    <p className="text-cream/60 text-xs sm:text-sm mt-2 leading-relaxed">{service.description}</p>
+                  </div>
+
+                  <button
+                    onClick={() => handleOpenBooking(service)}
+                    className="mt-5 text-xs font-semibold text-sunset hover:text-gold flex items-center gap-1 transition-colors uppercase tracking-widest cursor-pointer border-0 bg-transparent self-start"
+                  >
+                    Book Treatment &rarr;
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
 
         {/* Spa Policy Panel */}
         <div className="glass-strong rounded-3xl p-8 max-w-4xl mx-auto border border-white/15">
@@ -206,7 +279,7 @@ export default function SpaPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-cream/60 mb-1.5">Preffered Time</label>
+                    <label className="block text-xs text-cream/60 mb-1.5">Preferred Time</label>
                     <input
                       type="time"
                       value={spaForm.time}
@@ -218,12 +291,25 @@ export default function SpaPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs text-cream/60 mb-1.5">Special Considerations (e.g. Allergies, Therapist gender preference)</label>
+                  <label className="block text-xs text-cream/60 mb-1.5">Therapist Preference</label>
+                  <select
+                    value={spaForm.therapistPreference}
+                    onChange={(e) => setSpaForm({...spaForm, therapistPreference: e.target.value})}
+                    className="input-field py-2.5 text-xs bg-navy text-cream"
+                  >
+                    <option value="None">No Preference (First Available)</option>
+                    <option value="Male">Male Therapist</option>
+                    <option value="Female">Female Therapist</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs text-cream/60 mb-1.5">Special Considerations (e.g. Allergies, Special Requests)</label>
                   <textarea
                     value={spaForm.specialRequests}
                     onChange={(e) => setSpaForm({...spaForm, specialRequests: e.target.value})}
                     rows={2}
-                    placeholder="Allergies, seating preferences, etc..."
+                    placeholder="Allergies, specific preferences, etc..."
                     className="input-field py-2 text-xs resize-none"
                   />
                 </div>
@@ -244,9 +330,11 @@ export default function SpaPage() {
                 <p className="text-sm text-cream/70 leading-relaxed max-w-xs mx-auto">
                   Your appointment request for **{selectedService.name}** has been received. Our spa team will call you to confirm.
                 </p>
-                <div className="border border-white/5 rounded-2xl p-4 text-left text-xs text-cream/60 space-y-1 bg-white/5">
+                <div className="border border-white/5 rounded-2xl p-4 text-left text-xs text-cream/60 space-y-1.5 bg-white/5">
+                  <p><span className="text-cream/40 font-mono">APPOINTMENT ID:</span> <span className="text-gold font-bold">{confirmedBookingId}</span></p>
                   <p><span className="text-cream/40 font-mono">SERVICE:</span> {selectedService.name}</p>
                   <p><span className="text-cream/40 font-mono">DATE:</span> {spaForm.date} at {spaForm.time}</p>
+                  <p><span className="text-cream/40 font-mono">THERAPIST:</span> {spaForm.therapistPreference === 'None' ? 'No Preference' : `${spaForm.therapistPreference} Therapist`}</p>
                 </div>
                 <button
                   onClick={() => setSelectedService(null)}

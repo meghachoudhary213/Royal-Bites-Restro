@@ -125,5 +125,18 @@ export const api = {
     request(`/room-bookings/${id}/status`, {
       method: 'PATCH',
       body: JSON.stringify({ status })
-    })
+    }),
+
+  // Spa Management & Bookings
+  getSpaServices: () => request('/spa/services'),
+  createSpaBooking: (payload) =>
+    request('/spa/bookings', { method: 'POST', body: JSON.stringify(payload) }),
+  getSpaBookings: () => request('/spa/bookings'),
+  getMySpaBookings: () => request('/spa/bookings/my-bookings'),
+  updateSpaBookingStatus: (id, payload) =>
+    request(`/spa/bookings/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload)
+    }),
+  deleteSpaBooking: (id) => request(`/spa/bookings/${id}`, { method: 'DELETE' })
 };

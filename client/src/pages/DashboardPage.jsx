@@ -3,7 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { 
   User, History, MapPin, Heart, Edit3, Plus, Trash2, ShoppingBag, 
   LogOut, Check, AlertCircle, ArrowRight, RotateCcw, Star, PlusCircle, Compass,
-  Calendar
+  Calendar, Sparkles
 } from 'lucide-react';
 import { api } from '../api/api';
 import { showConfirm, showSuccess, showError } from '../utils/toast';
@@ -100,7 +100,9 @@ export default function DashboardPage({ currentUser, onUpdateProfile, onLogout, 
 
   const [bookingsList, setBookingsList] = useState([]);
   const [roomBookingsList, setRoomBookingsList] = useState([]);
+  const [spaBookingsList, setSpaBookingsList] = useState([]);
   const [loadingBookings, setLoadingBookings] = useState(false);
+  const [loadingSpaBookings, setLoadingSpaBookings] = useState(false);
   const [bookingsError, setBookingsError] = useState('');
 
   // Fetch room bookings from MongoDB with local fallback
@@ -149,6 +151,31 @@ export default function DashboardPage({ currentUser, onUpdateProfile, onLogout, 
     };
 
     fetchBookings();
+  }, [currentUser]);
+
+  // Fetch spa bookings from MongoDB with local fallback
+  useEffect(() => {
+    const fetchSpaBookings = async () => {
+      if (!currentUser) return;
+      setLoadingSpaBookings(true);
+      try {
+        const res = await api.getMySpaBookings();
+        if (res.success) {
+          setSpaBookingsList(res.data || []);
+        }
+      } catch (err) {
+        console.warn('Failed to fetch spa bookings from MongoDB, falling back to localStorage:', err.message);
+        const localSpaBookings = JSON.parse(localStorage.getItem('rb_spa_bookings') || '[]');
+        const userSpaBookings = localSpaBookings.filter(
+          b => b.email && b.email.toLowerCase() === currentUser.email.toLowerCase()
+        );
+        setSpaBookingsList(userSpaBookings);
+      } finally {
+        setLoadingSpaBookings(false);
+      }
+    };
+
+    fetchSpaBookings();
   }, [currentUser]);
 
   const [userReviews, setUserReviews] = useState([]);
@@ -944,6 +971,76 @@ export default function DashboardPage({ currentUser, onUpdateProfile, onLogout, 
                         className="text-xs text-sunset font-bold hover:underline mt-2 cursor-pointer bg-transparent border-0"
                       >
                         Book a table now
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* SPA APPOINTMENTS SECTION */}
+                <div className="space-y-6 pt-4 border-t border-white/5">
+                  <div>
+                    <h3 className="font-display text-xl font-bold text-cream">My Spa Appointments</h3>
+                    <p className="text-xs text-cream/40 mt-0.5">Track your wellness and therapy bookings</p>
+                  </div>
+
+                  {loadingSpaBookings ? (
+                    <div className="text-center py-8">
+                      <p className="text-sm text-cream/55">Loading your appointments...</p>
+                    </div>
+                  ) : spaBookingsList.length > 0 ? (
+                    <div className="grid md:grid-cols-2 gap-6">
+                      {spaBookingsList.map((appointment) => (
+                        <div key={appointment._id || appointment.id} className="glass p-5 rounded-2xl border border-white/10 hover:border-white/20 transition-all flex flex-col gap-4">
+                          <div className="flex justify-between items-center pb-3 border-b border-white/5">
+                            <div>
+                              <span className="text-[9px] font-mono text-cream/40 block">APPOINTMENT ID</span>
+                              <span className="text-xs font-mono font-bold text-gold">{appointment.appointmentId || appointment.id}</span>
+                            </div>
+                            <span className={`px-2.5 py-0.5 rounded-full border text-[10px] font-bold uppercase ${
+                              appointment.status?.toLowerCase() === 'pending' ? 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30' :
+                              appointment.status?.toLowerCase() === 'confirmed' ? 'bg-green-500/20 text-green-300 border-green-500/30' :
+                              appointment.status?.toLowerCase() === 'rescheduled' ? 'bg-purple-500/20 text-purple-300 border-purple-500/30' :
+                              appointment.status?.toLowerCase() === 'completed' ? 'bg-teal-500/20 text-teal-300 border-teal-500/30' :
+                              appointment.status?.toLowerCase() === 'cancelled' || appointment.status?.toLowerCase() === 'rejected' ? 'bg-red-500/20 text-red-300 border-red-500/30' :
+                              'bg-white/10 text-cream/70 border-white/20'
+                            }`}>
+                              {appointment.status}
+                            </span>
+                          </div>
+
+                          <div className="text-left">
+                            <h4 className="font-display font-bold text-sm text-cream">{appointment.service}</h4>
+                            <p className="text-[11px] text-cream/60 mt-0.5">Therapist: {appointment.therapistPreference === 'None' ? 'First Available' : `${appointment.therapistPreference} Therapist`}</p>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2 text-left text-xs text-cream/70 bg-white/5 p-3 rounded-xl">
+                            <div>
+                              <span className="text-[9px] text-cream/40 block">DATE & TIME</span>
+                              <span>{appointment.appointmentDate} at {appointment.appointmentTime}</span>
+                            </div>
+                            <div>
+                              <span className="text-[9px] text-cream/40 block">TOTAL PAID</span>
+                              <span className="font-bold text-gold">₹{appointment.totalAmount?.toLocaleString()}</span>
+                            </div>
+                          </div>
+                          
+                          {appointment.specialRequests && (
+                            <div className="text-left text-xs text-cream/50 italic border-t border-white/5 pt-2">
+                              &ldquo;{appointment.specialRequests}&rdquo;
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 glass rounded-2xl p-6 text-cream/50">
+                      <Sparkles className="w-12 h-12 mx-auto text-cream/30 mb-3" />
+                      <p className="text-sm">You haven't booked any spa treatments yet.</p>
+                      <button
+                        onClick={() => navigate('/spa')}
+                        className="text-xs text-sunset font-bold hover:underline mt-2 cursor-pointer bg-transparent border-0"
+                      >
+                        Book a therapy session
                       </button>
                     </div>
                   )}
