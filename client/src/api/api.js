@@ -138,5 +138,18 @@ export const api = {
       method: 'PATCH',
       body: JSON.stringify(payload)
     }),
-  deleteSpaBooking: (id) => request(`/spa/bookings/${id}`, { method: 'DELETE' })
+  deleteSpaBooking: (id) => request(`/spa/bookings/${id}`, { method: 'DELETE' }),
+
+  // Event & Banquet Management
+  getEventPackages: () => request('/events/packages'),
+  createEventBooking: (payload) =>
+    request('/events/bookings', { method: 'POST', body: JSON.stringify(payload) }),
+  getEventBookings: () => request('/events/bookings'),
+  getMyEventBookings: () => request('/events/bookings/my-bookings'),
+  updateEventBookingStatus: (id, status) =>
+    request(`/events/bookings/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status })
+    }),
+  deleteEventBooking: (id) => request(`/events/bookings/${id}`, { method: 'DELETE' })
 };

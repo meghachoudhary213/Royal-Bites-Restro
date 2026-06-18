@@ -4,7 +4,7 @@ import {
   Crown, Calendar, MessageSquare, RefreshCw, Trash2, LogOut, Lock, 
   ArrowLeft, DollarSign, ShoppingBag, TrendingUp, User, Plus, Edit3, 
   Star, CheckCircle2, XCircle, X, Tag, Sliders, ShieldAlert, Sparkles, Check,
-  Download, Bed
+  Download, Bed, Gift
 } from 'lucide-react';
 import { api } from '../api/api';
 import { showSuccess, showError, showWarning, showConfirm, showInfo, showLoading, resolveLoading } from '../utils/toast';
@@ -80,6 +80,7 @@ export default function AdminDashboard({ menuCategories, onUpdateMenu }) {
   const [hotelBookings, setHotelBookings] = useState([]);
   const [roomsList, setRoomsList] = useState([]);
   const [spaBookings, setSpaBookings] = useState([]);
+  const [eventBookings, setEventBookings] = useState([]);
 
   // Local storage lists
   const [orders, setOrders] = useState([]);
@@ -309,8 +310,9 @@ export default function AdminDashboard({ menuCategories, onUpdateMenu }) {
     let roomsData = null;
     let hotelBookingsData = null;
     let spaBookingsData = null;
+    let eventBookingsData = null;
     try {
-      const [bookingsRes, inquiriesRes, ordersRes, reviewsRes, couponsRes, roomsRes, hotelBookingsRes, spaBookingsRes] = await Promise.all([
+      const [bookingsRes, inquiriesRes, ordersRes, reviewsRes, couponsRes, roomsRes, hotelBookingsRes, spaBookingsRes, eventBookingsRes] = await Promise.all([
         api.getBookings().catch(err => {
           console.warn('Failed to fetch bookings from MongoDB, falling back to localStorage:', err.message);
           return { success: false, data: null };
@@ -342,6 +344,10 @@ export default function AdminDashboard({ menuCategories, onUpdateMenu }) {
         api.getSpaBookings().catch(err => {
           console.warn('Failed to fetch spa bookings from MongoDB, falling back to localStorage:', err.message);
           return { success: false, data: null };
+        }),
+        api.getEventBookings().catch(err => {
+          console.warn('Failed to fetch event bookings from MongoDB, falling back to localStorage:', err.message);
+          return { success: false, data: null };
         })
       ]);
       if (bookingsRes && bookingsRes.success) {
@@ -367,6 +373,9 @@ export default function AdminDashboard({ menuCategories, onUpdateMenu }) {
       }
       if (spaBookingsRes && spaBookingsRes.success) {
         spaBookingsData = spaBookingsRes.data;
+      }
+      if (eventBookingsRes && eventBookingsRes.success) {
+        eventBookingsData = eventBookingsRes.data;
       }
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
@@ -411,6 +420,10 @@ export default function AdminDashboard({ menuCategories, onUpdateMenu }) {
       // Setup spa bookings with fallback
       const localSpaBookings = JSON.parse(localStorage.getItem('rb_spa_bookings') || '[]');
       setSpaBookings(spaBookingsData !== null ? spaBookingsData : localSpaBookings);
+
+      // Setup event bookings with fallback
+      const localEventBookings = JSON.parse(localStorage.getItem('rb_event_bookings') || '[]');
+      setEventBookings(eventBookingsData !== null ? eventBookingsData : localEventBookings);
 
       setCustomers(JSON.parse(localStorage.getItem('registeredUsers') || '[]'));
       
@@ -761,6 +774,42 @@ export default function AdminDashboard({ menuCategories, onUpdateMenu }) {
       
       fetchData();
       showSuccess('Spa appointment deleted successfully.');
+    });
+  };
+
+  const handleUpdateEventBookingStatus = async (id, status) => {
+    const loadingToastId = showLoading('Updating event booking...');
+    try {
+      const res = await api.updateEventBookingStatus(id, status);
+      if (res.success) {
+        console.log('Event booking status updated in MongoDB');
+      }
+    } catch (apiError) {
+      console.warn('MongoDB event booking status update failed, using localStorage fallback:', apiError.message);
+      const localBookings = JSON.parse(localStorage.getItem('rb_event_bookings') || '[]');
+      const updatedBookings = localBookings.map(b => (b._id === id || b.id === id) ? { ...b, status } : b);
+      localStorage.setItem('rb_event_bookings', JSON.stringify(updatedBookings));
+    }
+    fetchData();
+    resolveLoading(loadingToastId, 'success', `Booking marked as ${status}`);
+  };
+
+  const handleDeleteEventBooking = (id) => {
+    showConfirm('Delete this event booking permanently?', async () => {
+      try {
+        const res = await api.deleteEventBooking(id);
+        if (res.success) {
+          console.log('Event booking deleted from MongoDB');
+        }
+      } catch (apiError) {
+        console.warn('MongoDB event booking deletion failed, using localStorage fallback:', apiError.message);
+      }
+      const localBookings = JSON.parse(localStorage.getItem('rb_event_bookings') || '[]');
+      const updatedBookings = localBookings.filter(b => b._id !== id && b.id !== id);
+      localStorage.setItem('rb_event_bookings', JSON.stringify(updatedBookings));
+      
+      fetchData();
+      showSuccess('Event booking deleted successfully.');
     });
   };
 
@@ -1530,6 +1579,7 @@ export default function AdminDashboard({ menuCategories, onUpdateMenu }) {
             { id: 'inquiries', label: 'Queries', icon: MessageSquare },
             { id: 'hotel', label: 'Hotel Management', icon: Bed },
             { id: 'spa', label: 'Spa Management', icon: Sparkles },
+            { id: 'events', label: 'Events Management', icon: Gift },
           ].map(({ id, label, icon: Icon }) => (
             <button
               key={id}
@@ -3538,6 +3588,153 @@ export default function AdminDashboard({ menuCategories, onUpdateMenu }) {
                             <button
                               type="button"
                               onClick={() => handleDeleteSpaBooking(bookingId)}
+                              className="p-1 rounded bg-red-600/10 hover:bg-red-600/20 text-red-400 border border-red-500/20 ml-2 cursor-pointer"
+                              title="Delete permanently"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* EVENTS MANAGEMENT TAB */}
+        {tab === 'events' && (
+          <div className="space-y-8">
+            {/* KPI Metrics */}
+            <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-4">
+              {[
+                { label: 'Total Events', value: eventBookings.length, icon: Calendar, color: 'text-cream' },
+                { label: 'Pending Bookings', value: eventBookings.filter(b => b.status === 'Pending').length, icon: Calendar, color: 'text-yellow-300' },
+                { label: 'Confirmed Events', value: eventBookings.filter(b => b.status === 'Confirmed').length, icon: Calendar, color: 'text-green-300' },
+                { label: 'Completed Events', value: eventBookings.filter(b => b.status === 'Completed').length, icon: Calendar, color: 'text-blue-300' },
+                { label: 'Event Revenue', value: `₹${eventBookings.filter(b => ['Confirmed', 'Completed'].includes(b.status)).reduce((sum, b) => sum + (b.totalAmount || 0), 0).toLocaleString()}`, icon: DollarSign, color: 'text-gold' }
+              ].map((stat, idx) => (
+                <div key={idx} className="glass-card p-5 border border-white/10 flex items-center justify-between">
+                  <div>
+                    <p className="text-cream/50 text-xs uppercase tracking-wider">{stat.label}</p>
+                    <p className={`text-2xl font-bold mt-1 font-display ${stat.color}`}>{stat.value}</p>
+                  </div>
+                  <stat.icon className="w-8 h-8 text-sunset/30" />
+                </div>
+              ))}
+            </div>
+
+            {/* Registry table registry list */}
+            <div className="glass p-6 rounded-3xl border border-white/10 space-y-4">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-gold pb-2 border-b border-white/5">
+                Event & Banquet Booking Registry ({eventBookings.length})
+              </h3>
+              
+              <div className="space-y-4">
+                {eventBookings.length === 0 ? (
+                  <p className="text-xs text-cream/40 text-center py-8">No event bookings registered yet.</p>
+                ) : (
+                  eventBookings.map((b) => {
+                    const bookingId = b._id || b.id;
+                    
+                    return (
+                      <div key={bookingId} className="glass p-5 rounded-2xl border border-white/5 space-y-3">
+                        <div className="flex justify-between items-start flex-wrap gap-2">
+                          <div>
+                            <div className="flex items-center gap-2.5">
+                              <h4 className="font-semibold text-cream text-sm">{b.guestName}</h4>
+                              <span className={`px-2 py-0.5 rounded text-[8px] font-bold uppercase border ${
+                                b.status === 'Pending' ? 'bg-yellow-500/10 text-yellow-300 border-yellow-500/20 animate-pulse' :
+                                b.status === 'Confirmed' ? 'bg-green-500/10 text-green-300 border-green-500/20' :
+                                b.status === 'Completed' ? 'bg-blue-500/10 text-blue-300 border-blue-500/20' :
+                                'bg-red-500/10 text-red-400 border-red-500/20'
+                              }`}>
+                                {b.status}
+                              </span>
+                            </div>
+                            <span className="text-[10px] text-cream/40">{b.email} · {b.phone}</span>
+                          </div>
+                          
+                          <div className="text-right flex flex-col items-end">
+                            <span className="text-xs font-mono text-gold font-bold">{b.bookingId}</span>
+                            <span className="text-[10px] text-cream/35">Requested {formatDate(b.createdAt)}</span>
+                          </div>
+                        </div>
+
+                        <div className="grid sm:grid-cols-3 gap-3 text-xs bg-white/5 p-3 rounded-xl">
+                          <div>
+                            <span className="block text-[8px] text-cream/30 uppercase">Package Selection</span>
+                            <span className="font-semibold text-cream/90">{b.package}</span>
+                            <span className="block text-[10px] text-gold/80 font-semibold">Event Type: {b.eventType}</span>
+                          </div>
+                          
+                          <div>
+                            <span className="block text-[8px] text-cream/30 uppercase">Scheduled Date & Guests</span>
+                            <span className="font-semibold text-cream/95">{b.eventDate}</span>
+                            <span className="block text-[10px] text-cream/50">{b.guestCount} Guest(s)</span>
+                          </div>
+
+                          <div>
+                            <span className="block text-[8px] text-cream/30 uppercase">Total Invoice Bill</span>
+                            <span className="font-bold text-gold">₹{(b.totalAmount || 0).toLocaleString()}</span>
+                          </div>
+                        </div>
+
+                        {b.specialRequirements && (
+                          <p className="text-xs text-cream/60 italic leading-relaxed">&ldquo;{b.specialRequirements}&rdquo;</p>
+                        )}
+
+                        <div className="flex justify-between items-center pt-2 border-t border-white/5 text-[10px]">
+                          <span className="text-cream/30">Select booking action:</span>
+                          
+                          <div className="flex gap-2 items-center">
+                            {b.status === 'Pending' && (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateEventBookingStatus(bookingId, 'Confirmed')}
+                                  className="px-2.5 py-1 bg-green-600/20 hover:bg-green-600/30 text-green-300 border border-green-500/30 font-bold rounded text-[9px] transition-all cursor-pointer"
+                                >
+                                  Confirm
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateEventBookingStatus(bookingId, 'Rejected')}
+                                  className="px-2.5 py-1 bg-red-600/20 hover:bg-red-600/30 text-red-300 border border-red-500/30 font-bold rounded text-[9px] transition-all cursor-pointer"
+                                >
+                                  Reject
+                                </button>
+                              </>
+                            )}
+
+                            {b.status === 'Confirmed' && (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateEventBookingStatus(bookingId, 'Completed')}
+                                  className="px-2.5 py-1 bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 font-bold rounded text-[9px] transition-all cursor-pointer"
+                                >
+                                  Complete
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateEventBookingStatus(bookingId, 'Cancelled')}
+                                  className="px-2.5 py-1 bg-red-600/20 hover:bg-red-600/30 text-red-300 border border-red-500/30 font-bold rounded text-[9px] transition-all cursor-pointer"
+                                >
+                                  Cancel
+                                </button>
+                              </>
+                            )}
+
+                            {['Completed', 'Cancelled', 'Rejected'].includes(b.status) && (
+                              <span className="text-cream/40 italic font-normal">Event Finished ({b.status})</span>
+                            )}
+
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteEventBooking(bookingId)}
                               className="p-1 rounded bg-red-600/10 hover:bg-red-600/20 text-red-400 border border-red-500/20 ml-2 cursor-pointer"
                               title="Delete permanently"
                             >

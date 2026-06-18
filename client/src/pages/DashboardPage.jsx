@@ -101,8 +101,10 @@ export default function DashboardPage({ currentUser, onUpdateProfile, onLogout, 
   const [bookingsList, setBookingsList] = useState([]);
   const [roomBookingsList, setRoomBookingsList] = useState([]);
   const [spaBookingsList, setSpaBookingsList] = useState([]);
+  const [eventBookingsList, setEventBookingsList] = useState([]);
   const [loadingBookings, setLoadingBookings] = useState(false);
   const [loadingSpaBookings, setLoadingSpaBookings] = useState(false);
+  const [loadingEventBookings, setLoadingEventBookings] = useState(false);
   const [bookingsError, setBookingsError] = useState('');
 
   // Fetch room bookings from MongoDB with local fallback
@@ -176,6 +178,31 @@ export default function DashboardPage({ currentUser, onUpdateProfile, onLogout, 
     };
 
     fetchSpaBookings();
+  }, [currentUser]);
+
+  // Fetch event bookings from MongoDB with local fallback
+  useEffect(() => {
+    const fetchEventBookings = async () => {
+      if (!currentUser) return;
+      setLoadingEventBookings(true);
+      try {
+        const res = await api.getMyEventBookings();
+        if (res.success) {
+          setEventBookingsList(res.data || []);
+        }
+      } catch (err) {
+        console.warn('Failed to fetch event bookings from MongoDB, falling back to localStorage:', err.message);
+        const localEventBookings = JSON.parse(localStorage.getItem('rb_event_bookings') || '[]');
+        const userEventBookings = localEventBookings.filter(
+          b => b.email && b.email.toLowerCase() === currentUser.email.toLowerCase()
+        );
+        setEventBookingsList(userEventBookings);
+      } finally {
+        setLoadingEventBookings(false);
+      }
+    };
+
+    fetchEventBookings();
   }, [currentUser]);
 
   const [userReviews, setUserReviews] = useState([]);
@@ -1041,6 +1068,82 @@ export default function DashboardPage({ currentUser, onUpdateProfile, onLogout, 
                         className="text-xs text-sunset font-bold hover:underline mt-2 cursor-pointer bg-transparent border-0"
                       >
                         Book a therapy session
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* EVENT BOOKINGS SECTION */}
+                <div className="space-y-6 pt-4 border-t border-white/5">
+                  <div>
+                    <h3 className="font-display text-xl font-bold text-cream">My Event & Banquet Bookings</h3>
+                    <p className="text-xs text-cream/40 mt-0.5">Track your grand wedding, birthday, corporate or conference events</p>
+                  </div>
+
+                  {loadingEventBookings ? (
+                    <div className="text-center py-8">
+                      <p className="text-sm text-cream/55">Loading your event bookings...</p>
+                    </div>
+                  ) : eventBookingsList.length > 0 ? (
+                    <div className="grid md:grid-cols-2 gap-6">
+                      {eventBookingsList.map((evt) => (
+                        <div key={evt._id || evt.id} className="glass p-5 rounded-2xl border border-white/10 hover:border-white/20 transition-all flex flex-col gap-4">
+                          <div className="flex justify-between items-center pb-3 border-b border-white/5">
+                            <div>
+                              <span className="text-[9px] font-mono text-cream/40 block">BOOKING ID</span>
+                              <span className="text-xs font-mono font-bold text-gold">{evt.bookingId || evt.id}</span>
+                            </div>
+                            <span className={`px-2.5 py-0.5 rounded-full border text-[10px] font-bold uppercase ${
+                              evt.status?.toLowerCase() === 'pending' ? 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30' :
+                              evt.status?.toLowerCase() === 'confirmed' ? 'bg-green-500/20 text-green-300 border-green-500/30' :
+                              evt.status?.toLowerCase() === 'completed' ? 'bg-blue-500/20 text-blue-300 border-blue-500/30' :
+                              evt.status?.toLowerCase() === 'cancelled' || evt.status?.toLowerCase() === 'rejected' ? 'bg-red-500/20 text-red-300 border-red-500/30' :
+                              'bg-white/10 text-cream/70 border-white/20'
+                            }`}>
+                              {evt.status}
+                            </span>
+                          </div>
+
+                          <div className="text-left">
+                            <h4 className="font-display font-bold text-sm text-cream">{evt.package}</h4>
+                            <p className="text-[11px] text-cream/60 mt-0.5">Event Type: {evt.eventType}</p>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2 text-left text-xs text-cream/70 bg-white/5 p-3 rounded-xl">
+                            <div>
+                              <span className="text-[9px] text-cream/40 block">EVENT DATE</span>
+                              <span>{evt.eventDate}</span>
+                            </div>
+                            <div>
+                              <span className="text-[9px] text-cream/40 block">GUESTS</span>
+                              <span>{evt.guestCount} Guest(s)</span>
+                            </div>
+                          </div>
+
+                          <div className="flex justify-between items-center pt-2">
+                            <div>
+                              <span className="text-[9px] text-cream/40 block">TOTAL AMOUNT</span>
+                              <span className="font-bold text-gold">₹{evt.totalAmount?.toLocaleString()}</span>
+                            </div>
+                          </div>
+
+                          {evt.specialRequirements && (
+                            <div className="text-left text-xs text-cream/50 italic border-t border-white/5 pt-2">
+                              &ldquo;{evt.specialRequirements}&rdquo;
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 glass rounded-2xl p-6 text-cream/50">
+                      <Sparkles className="w-12 h-12 mx-auto text-cream/30 mb-3" />
+                      <p className="text-sm">You haven't booked any events yet.</p>
+                      <button
+                        onClick={() => navigate('/events')}
+                        className="text-xs text-sunset font-bold hover:underline mt-2 cursor-pointer bg-transparent border-0"
+                      >
+                        Explore event packages
                       </button>
                     </div>
                   )}
