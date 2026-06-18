@@ -1,7 +1,7 @@
 export const roomsData = [
   {
     id: "presidential-suite",
-    name: "Presidential Infinity Suite",
+    name: "Presidential Suite",
     price: 45000,
     size: "180 m²",
     capacity: "Up to 3 Adults",
@@ -14,7 +14,7 @@ export const roomsData = [
   },
   {
     id: "royal-executive",
-    name: "Royal Executive Room",
+    name: "Executive Room",
     price: 25000,
     size: "75 m²",
     capacity: "Up to 2 Adults",
@@ -27,7 +27,7 @@ export const roomsData = [
   },
   {
     id: "deluxe-garden-villa",
-    name: "Deluxe Garden Sanctuary Villa",
+    name: "Deluxe Room",
     price: 18000,
     size: "110 m²",
     capacity: "Up to 4 Guests",
@@ -40,7 +40,7 @@ export const roomsData = [
   },
   {
     id: "superior-ocean-suite",
-    name: "Superior Oceanfront Room",
+    name: "Premium Suite",
     price: 32000,
     size: "95 m²",
     capacity: "Up to 3 Guests",

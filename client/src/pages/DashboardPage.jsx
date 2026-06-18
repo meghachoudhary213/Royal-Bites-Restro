@@ -103,14 +103,26 @@ export default function DashboardPage({ currentUser, onUpdateProfile, onLogout, 
   const [loadingBookings, setLoadingBookings] = useState(false);
   const [bookingsError, setBookingsError] = useState('');
 
-  // Fetch room bookings from localStorage
+  // Fetch room bookings from MongoDB with local fallback
   useEffect(() => {
-    if (!currentUser) return;
-    const localRoomBookings = JSON.parse(localStorage.getItem('rb_room_bookings') || '[]');
-    const userRoomBookings = localRoomBookings.filter(
-      b => b.email && b.email.toLowerCase() === currentUser.email.toLowerCase()
-    );
-    setRoomBookingsList(userRoomBookings);
+    const fetchRoomBookings = async () => {
+      if (!currentUser) return;
+      try {
+        const res = await api.getMyRoomBookings();
+        if (res.success) {
+          setRoomBookingsList(res.data || []);
+        }
+      } catch (err) {
+        console.warn('Failed to fetch room bookings from MongoDB, falling back to localStorage:', err.message);
+        const localRoomBookings = JSON.parse(localStorage.getItem('rb_room_bookings') || '[]');
+        const userRoomBookings = localRoomBookings.filter(
+          b => b.email && b.email.toLowerCase() === currentUser.email.toLowerCase()
+        );
+        setRoomBookingsList(userRoomBookings);
+      }
+    };
+
+    fetchRoomBookings();
   }, [currentUser]);
 
   // Fetch bookings from MongoDB with local fallback
@@ -815,13 +827,20 @@ export default function DashboardPage({ currentUser, onUpdateProfile, onLogout, 
                   {roomBookingsList.length > 0 ? (
                     <div className="grid md:grid-cols-2 gap-6">
                       {roomBookingsList.map((booking) => (
-                        <div key={booking.id} className="glass p-5 rounded-2xl border border-white/10 hover:border-white/20 transition-all flex flex-col gap-4">
+                        <div key={booking._id || booking.id} className="glass p-5 rounded-2xl border border-white/10 hover:border-white/20 transition-all flex flex-col gap-4">
                           <div className="flex justify-between items-center pb-3 border-b border-white/5">
                             <div>
                               <span className="text-[9px] font-mono text-cream/40 block">BOOKING ID</span>
-                              <span className="text-xs font-mono font-bold text-gold">{booking.id}</span>
+                              <span className="text-xs font-mono font-bold text-gold">{booking.bookingId || booking.id}</span>
                             </div>
-                            <span className="px-2.5 py-0.5 rounded-full bg-green-500/20 text-green-300 border border-green-500/30 text-[10px] font-bold uppercase">
+                            <span className={`px-2.5 py-0.5 rounded-full border text-[10px] font-bold uppercase ${
+                              booking.status?.toLowerCase() === 'pending' ? 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30' :
+                              booking.status?.toLowerCase() === 'confirmed' ? 'bg-green-500/20 text-green-300 border-green-500/30' :
+                              booking.status?.toLowerCase() === 'checkedin' ? 'bg-blue-500/20 text-blue-300 border-blue-500/30' :
+                              booking.status?.toLowerCase() === 'checkedout' ? 'bg-gray-500/20 text-gray-300 border-gray-500/30' :
+                              booking.status?.toLowerCase() === 'cancelled' || booking.status?.toLowerCase() === 'rejected' ? 'bg-red-500/20 text-red-300 border-red-500/30' :
+                              'bg-white/10 text-cream/70 border-white/20'
+                            }`}>
                               {booking.status}
                             </span>
                           </div>

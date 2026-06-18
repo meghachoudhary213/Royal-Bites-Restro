@@ -5,6 +5,7 @@ import Footer from '../components/Footer';
 import { roomsData } from '../data/hotel';
 import { Calendar, Users, Send, CheckCircle, Award, Coffee, Home } from 'lucide-react';
 import { showSuccess, showError } from '../utils/toast';
+import { api } from '../api/api';
 
 export default function BookingPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -24,6 +25,9 @@ export default function BookingPage() {
   });
   const [loading, setLoading] = useState(false);
   const [isBooked, setIsBooked] = useState(false);
+  const [createdBooking, setCreatedBooking] = useState(null);
+
+  const selectedRoom = roomsData.find(r => r.id === roomForm.roomType) || roomsData[0];
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -51,7 +55,7 @@ export default function BookingPage() {
     }));
   }, [searchParams]);
 
-  const handleRoomSubmit = (e) => {
+  const handleRoomSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
@@ -61,26 +65,46 @@ export default function BookingPage() {
       return;
     }
 
-    const selectedRoom = roomsData.find(r => r.id === roomForm.roomType) || roomsData[0];
-    const newBooking = {
-      id: `RM-${Date.now()}`,
-      roomName: selectedRoom.name,
-      roomPrice: selectedRoom.price,
-      image: selectedRoom.image,
-      ...roomForm,
-      status: 'Confirmed',
-      date: new Date().toLocaleDateString()
-    };
+    try {
+      const payload = {
+        roomType: selectedRoom.name,
+        guestName: roomForm.name,
+        phone: roomForm.phone,
+        email: roomForm.email,
+        checkIn: roomForm.checkIn,
+        checkOut: roomForm.checkOut,
+        guests: roomForm.guests,
+        specialRequests: roomForm.specialRequests
+      };
 
-    // Store room booking in localStorage
-    const localBookings = JSON.parse(localStorage.getItem('rb_room_bookings') || '[]');
-    localStorage.setItem('rb_room_bookings', JSON.stringify([newBooking, ...localBookings]));
-
-    setTimeout(() => {
-      setLoading(false);
+      const res = await api.createRoomBooking(payload);
+      if (res.success) {
+        setCreatedBooking(res.data);
+        setIsBooked(true);
+        showSuccess(`Room booking inquiry confirmed!`);
+      }
+    } catch (err) {
+      console.warn('API booking failed, falling back to local simulation:', err.message);
+      // Fallback
+      const newBooking = {
+        id: `RM-${Date.now()}`,
+        bookingId: `RM-${Date.now()}`,
+        roomName: selectedRoom.name,
+        roomPrice: selectedRoom.price,
+        image: selectedRoom.image,
+        ...roomForm,
+        status: 'Pending',
+        totalPrice: selectedRoom.price * 1, // fallback
+        date: new Date().toLocaleDateString()
+      };
+      const localBookings = JSON.parse(localStorage.getItem('rb_room_bookings') || '[]');
+      localStorage.setItem('rb_room_bookings', JSON.stringify([newBooking, ...localBookings]));
+      setCreatedBooking(newBooking);
       setIsBooked(true);
-      showSuccess(`Room booking inquiry submitted for ${selectedRoom.name}!`);
-    }, 800);
+      showSuccess(`Room booking simulated!`);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleTabChange = (tabName) => {
@@ -265,8 +289,14 @@ export default function BookingPage() {
                       </div>
                       <h3 className="font-display text-2xl font-bold text-cream">Stay Reserved!</h3>
                       <p className="text-sm text-cream/70 leading-relaxed">
-                        Your stay request has been confirmed. You can track this room reservation in your account dashboard.
+                        Your stay request has been confirmed.
                       </p>
+                      <div className="border border-white/5 rounded-2xl p-4 text-left text-xs text-cream/60 space-y-1 bg-white/5 max-w-sm mx-auto">
+                        <p><span className="text-cream/40 font-mono">BOOKING ID:</span> <span className="font-bold text-gold font-mono">{createdBooking?.bookingId || createdBooking?.id}</span></p>
+                        <p><span className="text-cream/40 font-mono">DATES:</span> {roomForm.checkIn} to {roomForm.checkOut}</p>
+                        <p><span className="text-cream/40 font-mono">GUESTS:</span> {roomForm.guests} Persons</p>
+                        <p><span className="text-cream/40 font-mono">ESTIMATED TOTAL:</span> ₹{(createdBooking?.totalPrice || selectedRoom.price)?.toLocaleString()}</p>
+                      </div>
                       <button
                         onClick={() => navigate('/dashboard?tab=bookings')}
                         className="px-6 py-2.5 bg-gradient-to-r from-sunset to-sunset-dark text-cream font-bold rounded-xl text-xs hover:opacity-90 cursor-pointer"

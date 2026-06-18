@@ -4,7 +4,7 @@ import {
   Crown, Calendar, MessageSquare, RefreshCw, Trash2, LogOut, Lock, 
   ArrowLeft, DollarSign, ShoppingBag, TrendingUp, User, Plus, Edit3, 
   Star, CheckCircle2, XCircle, X, Tag, Sliders, ShieldAlert, Sparkles, Check,
-  Download
+  Download, Bed
 } from 'lucide-react';
 import { api } from '../api/api';
 import { showSuccess, showError, showWarning, showConfirm, showInfo, showLoading, resolveLoading } from '../utils/toast';
@@ -77,6 +77,8 @@ export default function AdminDashboard({ menuCategories, onUpdateMenu }) {
   const [bookings, setBookings] = useState([]);
   const [inquiries, setInquiries] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [hotelBookings, setHotelBookings] = useState([]);
+  const [roomsList, setRoomsList] = useState([]);
 
   // Local storage lists
   const [orders, setOrders] = useState([]);
@@ -298,8 +300,10 @@ export default function AdminDashboard({ menuCategories, onUpdateMenu }) {
     let inquiriesData = null;
     let reviewsData = null;
     let couponsData = null;
+    let roomsData = null;
+    let hotelBookingsData = null;
     try {
-      const [bookingsRes, inquiriesRes, ordersRes, reviewsRes, couponsRes] = await Promise.all([
+      const [bookingsRes, inquiriesRes, ordersRes, reviewsRes, couponsRes, roomsRes, hotelBookingsRes] = await Promise.all([
         api.getBookings().catch(err => {
           console.warn('Failed to fetch bookings from MongoDB, falling back to localStorage:', err.message);
           return { success: false, data: null };
@@ -319,6 +323,14 @@ export default function AdminDashboard({ menuCategories, onUpdateMenu }) {
         api.getCoupons().catch(err => {
           console.warn('Failed to fetch coupons from MongoDB, falling back to localStorage:', err.message);
           return { success: false, data: null };
+        }),
+        api.getRooms().catch(err => {
+          console.warn('Failed to fetch physical rooms from MongoDB, falling back to localStorage:', err.message);
+          return { success: false, data: null };
+        }),
+        api.getRoomBookings().catch(err => {
+          console.warn('Failed to fetch hotel bookings from MongoDB, falling back to localStorage:', err.message);
+          return { success: false, data: null };
         })
       ]);
       if (bookingsRes && bookingsRes.success) {
@@ -336,6 +348,12 @@ export default function AdminDashboard({ menuCategories, onUpdateMenu }) {
       if (couponsRes && couponsRes.success) {
         couponsData = couponsRes.data;
       }
+      if (roomsRes && roomsRes.success) {
+        roomsData = roomsRes.data;
+      }
+      if (hotelBookingsRes && hotelBookingsRes.success) {
+        hotelBookingsData = hotelBookingsRes.data;
+      }
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
     } finally {
@@ -348,6 +366,33 @@ export default function AdminDashboard({ menuCategories, onUpdateMenu }) {
 
       const localOrders = JSON.parse(localStorage.getItem('rb_all_orders') || '[]');
       setOrders(ordersData !== null ? ordersData : localOrders);
+
+      // Setup rooms list with fallback
+      if (roomsData !== null) {
+        setRoomsList(roomsData);
+      } else {
+        const localRooms = JSON.parse(localStorage.getItem('rb_rooms') || '[]');
+        if (localRooms.length > 0) {
+          setRoomsList(localRooms);
+        } else {
+          const mockRooms = [
+            { id: '101', roomNumber: '101', roomType: 'Deluxe Room', status: 'Available', price: 18000 },
+            { id: '102', roomNumber: '102', roomType: 'Deluxe Room', status: 'Available', price: 18000 },
+            { id: '103', roomNumber: '103', roomType: 'Deluxe Room', status: 'Maintenance', price: 18000 },
+            { id: '201', roomNumber: '201', roomType: 'Executive Room', status: 'Available', price: 25000 },
+            { id: '202', roomNumber: '202', roomType: 'Executive Room', status: 'Available', price: 25000 },
+            { id: '301', roomNumber: '301', roomType: 'Premium Suite', status: 'Available', price: 32000 },
+            { id: '302', roomNumber: '302', roomType: 'Premium Suite', status: 'Available', price: 32000 },
+            { id: '401', roomNumber: '401', roomType: 'Presidential Suite', status: 'Available', price: 45000 }
+          ];
+          localStorage.setItem('rb_rooms', JSON.stringify(mockRooms));
+          setRoomsList(mockRooms);
+        }
+      }
+
+      // Setup room bookings with fallback
+      const localRoomBookings = JSON.parse(localStorage.getItem('rb_room_bookings') || '[]');
+      setHotelBookings(hotelBookingsData !== null ? hotelBookingsData : localRoomBookings);
 
       setCustomers(JSON.parse(localStorage.getItem('registeredUsers') || '[]'));
       
@@ -591,6 +636,62 @@ export default function AdminDashboard({ menuCategories, onUpdateMenu }) {
       fetchData();
       showSuccess('Booking deleted successfully.');
     });
+  };
+
+  const handleUpdateHotelBookingStatus = async (id, status) => {
+    const loadingToastId = showLoading('Updating reservation...');
+    try {
+      const res = await api.updateRoomBookingStatus(id, status);
+      if (res.success) {
+        console.log('Hotel reservation status updated in MongoDB');
+      }
+    } catch (apiError) {
+      console.warn('MongoDB hotel booking status update failed, using localStorage fallback:', apiError.message);
+      const localBookings = JSON.parse(localStorage.getItem('rb_room_bookings') || '[]');
+      const updatedBookings = localBookings.map(b => {
+        if (b._id === id || b.id === id) {
+          if (status === 'CheckedIn') {
+            const rooms = JSON.parse(localStorage.getItem('rb_rooms') || '[]');
+            const updatedRooms = rooms.map(r => r.id === b.room || r._id === b.room ? { ...r, status: 'Occupied' } : r);
+            localStorage.setItem('rb_rooms', JSON.stringify(updatedRooms));
+          } else if (status === 'CheckedOut') {
+            const rooms = JSON.parse(localStorage.getItem('rb_rooms') || '[]');
+            const updatedRooms = rooms.map(r => r.id === b.room || r._id === b.room ? { ...r, status: 'Cleaning' } : r);
+            localStorage.setItem('rb_rooms', JSON.stringify(updatedRooms));
+          } else if (status === 'Confirmed') {
+            const rooms = JSON.parse(localStorage.getItem('rb_rooms') || '[]');
+            const updatedRooms = rooms.map(r => r.id === b.room || r._id === b.room ? { ...r, status: 'Reserved' } : r);
+            localStorage.setItem('rb_rooms', JSON.stringify(updatedRooms));
+          } else if (['Cancelled', 'Rejected'].includes(status)) {
+            const rooms = JSON.parse(localStorage.getItem('rb_rooms') || '[]');
+            const updatedRooms = rooms.map(r => r.id === b.room || r._id === b.room ? { ...r, status: 'Available' } : r);
+            localStorage.setItem('rb_rooms', JSON.stringify(updatedRooms));
+          }
+          return { ...b, status };
+        }
+        return b;
+      });
+      localStorage.setItem('rb_room_bookings', JSON.stringify(updatedBookings));
+    }
+    fetchData();
+    resolveLoading(loadingToastId, 'success', `Reservation marked as ${status}`);
+  };
+
+  const handleUpdateRoomStatus = async (id, status) => {
+    const loadingToastId = showLoading('Updating room status...');
+    try {
+      const res = await api.updateRoomStatus(id, status);
+      if (res.success) {
+        console.log('Room status updated in MongoDB');
+      }
+    } catch (apiError) {
+      console.warn('MongoDB room status update failed, using localStorage fallback:', apiError.message);
+      const localRooms = JSON.parse(localStorage.getItem('rb_rooms') || '[]');
+      const updatedRooms = localRooms.map(r => (r._id === id || r.id === id) ? { ...r, status } : r);
+      localStorage.setItem('rb_rooms', JSON.stringify(updatedRooms));
+    }
+    fetchData();
+    resolveLoading(loadingToastId, 'success', `Room status updated to ${status}`);
   };
 
   // INQUIRY CONTROLS
@@ -1357,6 +1458,7 @@ export default function AdminDashboard({ menuCategories, onUpdateMenu }) {
             { id: 'reviews', label: 'Reviews List', icon: Star },
             { id: 'bookings', label: 'Reservations', icon: Calendar },
             { id: 'inquiries', label: 'Queries', icon: MessageSquare },
+            { id: 'hotel', label: 'Hotel Management', icon: Bed },
           ].map(({ id, label, icon: Icon }) => (
             <button
               key={id}
@@ -2929,6 +3031,239 @@ export default function AdminDashboard({ menuCategories, onUpdateMenu }) {
                 </div>
               ))
             )}
+          </div>
+        )}
+
+        {/* HOTEL MANAGEMENT TAB */}
+        {tab === 'hotel' && (
+          <div className="space-y-8">
+            {/* KPI Metrics */}
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {[
+                { label: 'Total Rooms', value: roomsList.length, icon: Bed, color: 'text-cream' },
+                { label: 'Available Rooms', value: roomsList.filter(r => r.status === 'Available').length, icon: Bed, color: 'text-green-400' },
+                { label: 'Occupied Rooms', value: roomsList.filter(r => r.status === 'Occupied').length, icon: Bed, color: 'text-red-400' },
+                { label: 'Total Revenue', value: `₹${hotelBookings.filter(b => ['Confirmed', 'CheckedIn', 'CheckedOut'].includes(b.status)).reduce((sum, b) => sum + (b.totalPrice || 0), 0).toLocaleString()}`, icon: DollarSign, color: 'text-gold' }
+              ].map((stat, idx) => (
+                <div key={idx} className="glass-card p-5 border border-white/10 flex items-center justify-between">
+                  <div>
+                    <p className="text-cream/50 text-xs uppercase tracking-wider">{stat.label}</p>
+                    <p className={`text-2xl font-bold mt-1 font-display ${stat.color}`}>{stat.value}</p>
+                  </div>
+                  <stat.icon className="w-8 h-8 text-sunset/30" />
+                </div>
+              ))}
+            </div>
+
+            {/* Additional mini KPI Row */}
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              {[
+                { label: 'Total Reservations', value: hotelBookings.length, color: 'text-cream' },
+                { label: "Check-ins Today", value: hotelBookings.filter(b => b.checkIn && new Date(b.checkIn).toDateString() === new Date().toDateString()).length, color: 'text-yellow-300' },
+                { label: "Check-outs Today", value: hotelBookings.filter(b => b.checkOut && new Date(b.checkOut).toDateString() === new Date().toDateString()).length, color: 'text-blue-300' }
+              ].map((item, idx) => (
+                <div key={idx} className="glass p-4 rounded-2xl border border-white/10 text-center">
+                  <span className="text-[9px] text-cream/40 block uppercase tracking-wider font-semibold">{item.label}</span>
+                  <span className={`text-2xl font-bold ${item.color} mt-1.5 font-display block`}>{item.value}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Room Reservations Management Section */}
+            <div className="glass p-6 rounded-3xl border border-white/10 space-y-4">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-gold pb-2 border-b border-white/5">
+                Room Reservations Management ({hotelBookings.length})
+              </h3>
+              
+              <div className="space-y-4">
+                {hotelBookings.length === 0 ? (
+                  <p className="text-xs text-cream/40 text-center py-8">No room bookings registered yet.</p>
+                ) : (
+                  hotelBookings.map((b) => {
+                    const bookingId = b._id || b.id;
+                    const checkInDate = b.checkIn ? new Date(b.checkIn).toLocaleDateString() : '';
+                    const checkOutDate = b.checkOut ? new Date(b.checkOut).toLocaleDateString() : '';
+                    
+                    return (
+                      <div key={bookingId} className="glass p-5 rounded-2xl border border-white/5 space-y-3">
+                        <div className="flex justify-between items-start flex-wrap gap-2">
+                          <div>
+                            <div className="flex items-center gap-2.5">
+                              <h4 className="font-semibold text-cream text-sm">{b.guestName}</h4>
+                              <span className={`px-2 py-0.5 rounded text-[8px] font-bold uppercase border ${
+                                b.status === 'Cancelled' || b.status === 'Rejected'
+                                  ? 'bg-red-500/10 text-red-400 border-red-500/20'
+                                  : b.status === 'CheckedOut'
+                                    ? 'bg-blue-500/10 text-blue-400 border-blue-500/20'
+                                    : b.status === 'CheckedIn'
+                                      ? 'bg-purple-500/10 text-purple-400 border-purple-500/20'
+                                      : b.status === 'Confirmed'
+                                        ? 'bg-green-500/10 text-green-400 border-green-500/20'
+                                        : 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20 animate-pulse'
+                              }`}>
+                                {b.status}
+                              </span>
+                            </div>
+                            <span className="text-[10px] text-cream/40">{b.email} · {b.phone}</span>
+                          </div>
+                          
+                          <div className="text-right">
+                            <span className="text-xs font-mono text-gold font-bold block">{b.bookingId}</span>
+                            <span className="text-[10px] text-cream/35">Submitted {formatDate(b.createdAt)}</span>
+                          </div>
+                        </div>
+
+                        <div className="grid sm:grid-cols-3 gap-3 text-xs bg-white/5 p-3 rounded-xl">
+                          <div>
+                            <span className="block text-[8px] text-cream/30 uppercase">Room Details</span>
+                            <span className="font-semibold text-cream/90">{b.roomType}</span>
+                            {b.room ? (
+                              <span className="block text-[10px] text-gold font-semibold">Assigned Room: {b.room.roomNumber || b.room.toString()}</span>
+                            ) : (
+                              b.roomNumber && <span className="block text-[10px] text-gold font-semibold">Assigned Room: {b.roomNumber}</span>
+                            )}
+                          </div>
+                          
+                          <div>
+                            <span className="block text-[8px] text-cream/30 uppercase">Dates & Guests</span>
+                            <span className="font-semibold text-cream/95">{checkInDate} to {checkOutDate}</span>
+                            <span className="block text-[10px] text-cream/50">{b.guests} Guests</span>
+                          </div>
+
+                          <div>
+                            <span className="block text-[8px] text-cream/30 uppercase">Total Booking Price</span>
+                            <span className="font-bold text-gold">₹{(b.totalPrice || 0).toLocaleString()}</span>
+                            <span className="block text-[9px] text-cream/35">₹{(b.roomPrice || 0).toLocaleString()} / night</span>
+                          </div>
+                        </div>
+
+                        {b.specialRequests && (
+                          <p className="text-xs text-cream/60 italic leading-relaxed">&ldquo;{b.specialRequests}&rdquo;</p>
+                        )}
+
+                        <div className="flex justify-between items-center pt-2 border-t border-white/5 text-[10px]">
+                          <span className="text-cream/30">Select reservation actions:</span>
+                          
+                          <div className="flex gap-2 items-center">
+                            {b.status === 'Pending' && (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateHotelBookingStatus(bookingId, 'Confirmed')}
+                                  className="px-2.5 py-1 bg-green-600/20 hover:bg-green-600/30 text-green-300 border border-green-500/30 font-bold rounded text-[9px] transition-all cursor-pointer"
+                                >
+                                  Approve
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateHotelBookingStatus(bookingId, 'Rejected')}
+                                  className="px-2.5 py-1 bg-red-600/20 hover:bg-red-600/30 text-red-300 border border-red-500/30 font-bold rounded text-[9px] transition-all cursor-pointer"
+                                >
+                                  Reject
+                                </button>
+                              </>
+                            )}
+
+                            {b.status === 'Confirmed' && (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateHotelBookingStatus(bookingId, 'CheckedIn')}
+                                  className="px-2.5 py-1 bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/30 font-bold rounded text-[9px] transition-all cursor-pointer"
+                                >
+                                  Check In
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateHotelBookingStatus(bookingId, 'Cancelled')}
+                                  className="px-2.5 py-1 bg-red-600/20 hover:bg-red-600/30 text-red-300 border border-red-500/30 font-bold rounded text-[9px] transition-all cursor-pointer"
+                                >
+                                  Cancel Booking
+                                </button>
+                              </>
+                            )}
+
+                            {b.status === 'CheckedIn' && (
+                              <button
+                                type="button"
+                                onClick={() => handleUpdateHotelBookingStatus(bookingId, 'CheckedOut')}
+                                className="px-2.5 py-1 bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 font-bold rounded text-[9px] transition-all cursor-pointer"
+                              >
+                                Check Out
+                              </button>
+                            )}
+
+                            {['CheckedOut', 'Cancelled', 'Rejected'].includes(b.status) && (
+                              <span className="text-cream/40 italic font-normal">Completed Stay ({b.status})</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+
+            {/* Room Status & Availability Grid */}
+            <div className="glass p-6 rounded-3xl border border-white/10 space-y-4">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-gold pb-2 border-b border-white/5">
+                Physical Room Inventory & Status Grid
+              </h3>
+              
+              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {roomsList.map((room) => {
+                  const roomId = room._id || room.id;
+                  
+                  return (
+                    <div key={roomId} className="glass p-4 rounded-2xl border border-white/5 flex flex-col justify-between gap-4 font-medium text-xs">
+                      <div>
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <span className="text-sm font-bold text-cream block">Room {room.roomNumber}</span>
+                            <span className="text-[10px] text-cream/50">{room.roomType}</span>
+                          </div>
+
+                          <span className={`px-2 py-0.5 rounded text-[8px] font-bold uppercase border ${
+                            room.status === 'Occupied'
+                              ? 'bg-red-500/10 text-red-400 border-red-500/20'
+                              : room.status === 'Reserved'
+                                ? 'bg-yellow-500/10 text-yellow-300 border-yellow-500/20 animate-pulse'
+                                : room.status === 'Maintenance'
+                                  ? 'bg-orange-500/10 text-orange-400 border-orange-500/20'
+                                  : room.status === 'Cleaning'
+                                    ? 'bg-blue-500/10 text-blue-400 border-blue-500/20'
+                                    : 'bg-green-500/10 text-green-400 border-green-500/20'
+                          }`}>
+                            {room.status}
+                          </span>
+                        </div>
+
+                        <div className="mt-3 text-[10px] text-cream/60">
+                          Price: <span className="font-semibold text-gold">₹{room.price ? room.price.toLocaleString() : 'N/A'}</span> / night
+                        </div>
+                      </div>
+
+                      <div className="pt-2 border-t border-white/5">
+                        <label className="block text-[8px] text-cream/40 uppercase mb-1">Set Manual Status</label>
+                        <select
+                          value={room.status}
+                          onChange={(e) => handleUpdateRoomStatus(roomId, e.target.value)}
+                          className="input-field py-1 px-2 text-[10px] w-full cursor-pointer bg-navy"
+                        >
+                          <option value="Available" className="bg-navy">Available</option>
+                          <option value="Reserved" className="bg-navy">Reserved</option>
+                          <option value="Occupied" className="bg-navy">Occupied</option>
+                          <option value="Maintenance" className="bg-navy">Maintenance</option>
+                          <option value="Cleaning" className="bg-navy">Cleaning</option>
+                        </select>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
           </div>
         )}
 

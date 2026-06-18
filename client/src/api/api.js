@@ -109,4 +109,21 @@ export const api = {
     request('/orders/razorpay', { method: 'POST', body: JSON.stringify(payload) }),
   verifyRazorpayPayment: (payload) =>
     request('/orders/razorpay/verify', { method: 'POST', body: JSON.stringify(payload) }),
+
+  // Hotel Room Management & Bookings
+  getRooms: () => request('/rooms'),
+  updateRoomStatus: (id, status) =>
+    request(`/rooms/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status })
+    }),
+  createRoomBooking: (payload) =>
+    request('/room-bookings', { method: 'POST', body: JSON.stringify(payload) }),
+  getRoomBookings: () => request('/room-bookings'),
+  getMyRoomBookings: () => request('/room-bookings/my-bookings'),
+  updateRoomBookingStatus: (id, status) =>
+    request(`/room-bookings/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status })
+    })
 };

@@ -4,6 +4,7 @@ import { roomsData } from '../data/hotel';
 import { Users, Coffee, Bed, Sparkles, CheckCircle } from 'lucide-react';
 import { showSuccess, showError } from '../utils/toast';
 import Footer from '../components/Footer';
+import { api } from '../api/api';
 
 // Pure date helper functions defined outside the component to follow pure render rules
 const getTodayDateString = () => new Date().toISOString().split('T')[0];
@@ -21,6 +22,8 @@ export default function RoomsPage() {
   const [checkOut, setCheckOut] = useState(searchParams.get('checkOut') || '');
   const [guests, setGuests] = useState(searchParams.get('guests') || '2');
   const [roomType, setRoomType] = useState(searchParams.get('roomType') || 'all');
+
+  const [createdBooking, setCreatedBooking] = useState(null);
 
   // Booking Modal state
   const [selectedRoom, setSelectedRoom] = useState(null);
@@ -56,29 +59,51 @@ export default function RoomsPage() {
     setIsBooked(false);
   };
 
-  const handleBookingSubmit = (e) => {
+  const handleBookingSubmit = async (e) => {
     e.preventDefault();
     if (!bookingForm.name || !bookingForm.email || !bookingForm.phone) {
       showError('Please fill in all contact details.');
       return;
     }
 
-    const newBooking = {
-      id: `RM-${Date.now()}`,
-      roomName: selectedRoom.name,
-      roomPrice: selectedRoom.price,
-      image: selectedRoom.image,
-      ...bookingForm,
-      status: 'Confirmed',
-      date: new Date().toLocaleDateString()
-    };
+    try {
+      const payload = {
+        roomType: selectedRoom.name,
+        guestName: bookingForm.name,
+        phone: bookingForm.phone,
+        email: bookingForm.email,
+        checkIn: bookingForm.checkIn,
+        checkOut: bookingForm.checkOut,
+        guests: bookingForm.guests,
+        specialRequests: bookingForm.specialRequests
+      };
 
-    // Store booking in localStorage
-    const localBookings = JSON.parse(localStorage.getItem('rb_room_bookings') || '[]');
-    localStorage.setItem('rb_room_bookings', JSON.stringify([newBooking, ...localBookings]));
-
-    setIsBooked(true);
-    showSuccess(`Room booking confirmed for ${selectedRoom.name}!`);
+      const res = await api.createRoomBooking(payload);
+      if (res.success) {
+        setCreatedBooking(res.data);
+        setIsBooked(true);
+        showSuccess(`Room booking inquiry confirmed!`);
+      }
+    } catch (err) {
+      console.warn('API booking failed, falling back to local simulation:', err.message);
+      // Fallback
+      const newBooking = {
+        id: `RM-${Date.now()}`,
+        bookingId: `RM-${Date.now()}`,
+        roomName: selectedRoom.name,
+        roomPrice: selectedRoom.price,
+        image: selectedRoom.image,
+        ...bookingForm,
+        status: 'Pending',
+        totalPrice: selectedRoom.price * 1, // simplified fallback
+        date: new Date().toLocaleDateString()
+      };
+      const localBookings = JSON.parse(localStorage.getItem('rb_room_bookings') || '[]');
+      localStorage.setItem('rb_room_bookings', JSON.stringify([newBooking, ...localBookings]));
+      setCreatedBooking(newBooking);
+      setIsBooked(true);
+      showSuccess(`Room booking simulated!`);
+    }
   };
 
   // Filter logic
@@ -348,12 +373,13 @@ export default function RoomsPage() {
                 </div>
                 <h3 className="font-display text-2xl font-bold text-cream">Inquiry Confirmed!</h3>
                 <p className="text-sm text-cream/70 leading-relaxed max-w-xs mx-auto">
-                  Your simulated booking for **{selectedRoom.name}** has been secured in your profile. Our resort hosts will contact you within 24 hours.
+                  Your booking request for **{selectedRoom.name}** has been secured.
                 </p>
                 <div className="border border-white/5 rounded-2xl p-4 text-left text-xs text-cream/60 space-y-1 bg-white/5">
+                  <p><span className="text-cream/40 font-mono">BOOKING ID:</span> <span className="font-bold text-gold font-mono">{createdBooking?.bookingId || createdBooking?.id}</span></p>
                   <p><span className="text-cream/40 font-mono">DATES:</span> {bookingForm.checkIn} to {bookingForm.checkOut}</p>
                   <p><span className="text-cream/40 font-mono">GUESTS:</span> {bookingForm.guests} Persons</p>
-                  <p><span className="text-cream/40 font-mono">ROOM:</span> {selectedRoom.name}</p>
+                  <p><span className="text-cream/40 font-mono">ESTIMATED TOTAL:</span> ₹{(createdBooking?.totalPrice || selectedRoom.price)?.toLocaleString()}</p>
                 </div>
                 <button
                   onClick={() => setSelectedRoom(null)}

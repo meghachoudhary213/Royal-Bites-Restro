@@ -5,6 +5,10 @@ const connectDB = async () => {
     const dbUri = process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/royal-bites';
     const conn = await mongoose.connect(dbUri);
     console.log(`MongoDB Connected: ${conn.connection.host}`);
+    
+    // Seed default physical rooms if they don't exist
+    const { seedRooms } = require('../services/roomSeeder');
+    await seedRooms();
   } catch (error) {
     console.error(`MongoDB Connection Error: ${error.message}`);
     // Do not exit process so that the hybrid local fallback architecture can function
